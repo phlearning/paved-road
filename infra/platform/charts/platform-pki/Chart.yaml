@@ -1,0 +1,5 @@
+apiVersion: v2
+name: platform-pki
+description: Internal certificate authority of the paved-road platform.
+type: application
+version: 0.1.0

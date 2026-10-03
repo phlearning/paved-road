@@ -1,0 +1,61 @@
+---
+# Prepares the developer workstation: installs the platform toolchain and
+# starts a container runtime sized for the local cluster.
+- name: Prepare workstation for paved-road
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  vars:
+    colima_cpus: 4
+    colima_memory_gib: 8
+    colima_disk_gib: 60
+    brew_packages:
+      - colima
+      - docker
+      - k3d
+      - kubernetes-cli
+      - helm
+      - kubeseal
+      - go
+      - ansible-lint
+      - hashicorp/tap/terraform
+
+  tasks:
+    - name: Fail on unsupported operating systems
+      ansible.builtin.assert:
+        that: ansible_facts['os_family'] == 'Darwin'
+        fail_msg: "Only macOS is supported for now (Linux support lands with the CI e2e job)."
+
+    - name: Tap HashiCorp formulae
+      community.general.homebrew_tap:
+        name: hashicorp/tap
+        state: present
+
+    - name: Install toolchain
+      community.general.homebrew:
+        name: "{{ brew_packages }}"
+        state: present
+
+    - name: Check Colima status
+      ansible.builtin.command: colima status
+      register: colima_status
+      changed_when: false
+      failed_when: false
+
+    - name: Start Colima
+      ansible.builtin.command: >-
+        colima start
+        --cpu {{ colima_cpus }}
+        --memory {{ colima_memory_gib }}
+        --disk {{ colima_disk_gib }}
+      when: colima_status.rc != 0
+      changed_when: true
+
+    - name: Wait for the Docker daemon
+      ansible.builtin.command: docker info --format '{{ "{{" }}.ServerVersion{{ "}}" }}'
+      register: docker_info
+      retries: 10
+      delay: 3
+      until: docker_info.rc == 0
+      changed_when: false

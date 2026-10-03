@@ -1,0 +1,14 @@
+# Cluster credentials and exported CA
+.kube/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+**/.generated/
+
+# Ansible collections installed by `make bootstrap`
+ansible/collections/
+
+.DS_Store

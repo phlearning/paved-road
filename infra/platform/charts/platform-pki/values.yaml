@@ -1,0 +1,6 @@
+# Name of the ClusterIssuer that signs every platform certificate.
+clusterIssuer: paved-road-ca
+# Secret holding the root CA key pair, in the cert-manager namespace.
+rootSecretName: paved-road-root-ca
+rootCommonName: paved-road root CA
+rootDuration: 87600h # 10 years

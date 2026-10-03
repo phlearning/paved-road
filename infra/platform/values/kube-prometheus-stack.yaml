@@ -1,0 +1,57 @@
+# k3s embeds these control-plane components in a single binary and does not
+# expose their metrics endpoints the way kubeadm clusters do.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    # Pick up ServiceMonitors, PodMonitors and rules from every namespace,
+    # so services created by the golden path are scraped without extra wiring.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    retention: 2d
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+
+grafana:
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: paved-road-ca
+    hosts:
+      - grafana.localhost
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.localhost
+  sidecar:
+    dashboards:
+      # Services ship their own dashboards as labelled ConfigMaps.
+      searchNamespace: ALL
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      access: proxy
+      url: http://loki.monitoring.svc:3100

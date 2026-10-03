@@ -1,0 +1,35 @@
+global:
+  domain: argocd.localhost
+
+configs:
+  params:
+    # TLS terminates at the Traefik ingress.
+    server.insecure: true
+
+# No SSO on a local platform: the built-in admin account is enough.
+dex:
+  enabled: false
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: paved-road-ca
+    tls: true
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+controller:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+repoServer:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
