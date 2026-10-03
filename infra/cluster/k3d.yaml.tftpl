@@ -12,6 +12,17 @@ ports:
   - port: 443:443
     nodeFilters:
       - loadbalancer
+%{ if registry != null ~}
+# Node-level pull credentials: every namespace created by the golden path can
+# pull service images without its own imagePullSecret.
+registries:
+  config: |
+    configs:
+      ${registry.host}:
+        auth:
+          username: ${registry.username}
+          password: ${registry.token}
+%{ endif ~}
 options:
   k3d:
     wait: true

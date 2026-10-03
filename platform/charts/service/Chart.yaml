@@ -1,0 +1,8 @@
+apiVersion: v2
+name: service
+description: >-
+  Golden path chart shared by every paved-road service: deployment with a
+  hardened security context, HTTPS ingress, Prometheus scraping and a
+  Grafana dashboard.
+type: application
+version: 0.1.0

@@ -13,3 +13,4 @@ ansible/collections/
 
 .DS_Store
 .paved-road.env
+bin/

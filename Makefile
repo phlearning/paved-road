@@ -15,13 +15,20 @@ BECOME_FLAGS ?= $(shell [ "$$(uname -s)" = Linux ] && ! sudo -n true 2>/dev/null
 
 TF_VARS := -var kubeconfig_path=$(KUBECONFIG_PATH) -var profile=$(PROFILE)
 
+# Read-only credentials for the private repository, taken from the environment
+# so they never land in Git (see docs/adr/0005-gitops-delivery.md):
+#   PAVED_ROAD_GIT_TOKEN       fine-grained token, Contents: read on the repository
+#   PAVED_ROAD_REGISTRY_TOKEN  classic token with read:packages, to pull images
+export TF_VAR_git_token := $(PAVED_ROAD_GIT_TOKEN)
+export TF_VAR_registry_token := $(PAVED_ROAD_REGISTRY_TOKEN)
+
 export KUBECONFIG := $(KUBECONFIG_PATH)
 # pipx installs Ansible there on Linux.
 export PATH := $(HOME)/.local/bin:$(PATH)
 
 .PHONY: help
 help: ## Show this help
-	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: bootstrap
 bootstrap: ## Install the toolchain and start the container runtime (Ansible)
@@ -80,10 +87,26 @@ urls: ## Print the platform URLs
 status: ## Show the state of the platform workloads
 	kubectl get pods -A -o wide | grep -v Completed
 
+.PHONY: cli
+cli: ## Build platformctl into bin/
+	go build -o bin/platformctl ./cli/cmd/platformctl
+
+.PHONY: test
+test: ## Run the Go tests and the chart lint
+	go vet ./...
+	go test ./...
+	helm lint platform/charts/service --set name=lint --set-string image.repository=lint,image.tag=lint
+
+.PHONY: e2e
+e2e: ## Scaffold, build and deploy a service per language on the running cluster
+	hack/e2e.sh
+
 .PHONY: lint
 lint: ## Lint Terraform and Ansible code
 	terraform fmt -check -recursive infra
+	terraform -chdir=$(TF_CLUSTER) init -backend=false -input=false >/dev/null
 	terraform -chdir=$(TF_CLUSTER) validate
+	terraform -chdir=$(TF_PLATFORM) init -backend=false -input=false >/dev/null
 	terraform -chdir=$(TF_PLATFORM) validate
 	cd ansible && ansible-lint bootstrap.yml tasks/ vars/ handlers/
 	shellcheck hack/*.sh

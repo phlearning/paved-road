@@ -72,6 +72,28 @@ make creds       # print the admin passwords
 
 `make bootstrap` picks the profile from the machine's memory. To force it: `make bootstrap PROFILE=lite`. See [ADR 4](docs/adr/0004-resource-profiles-and-supported-systems.md).
 
+## Golden path: create a service
+
+```bash
+make cli                                          # build bin/platformctl
+bin/platformctl new-service orders-api --lang go  # or --lang python
+git add apps/orders-api && git commit -m "Add orders-api" && git push
+bin/platformctl status orders-api
+```
+
+`new-service` generates the code, tests, a non-root Dockerfile and a `values.yaml`. Once merged, the CI builds the image and pushes it to GHCR, then Argo CD deploys the service to https://orders-api.localhost with a TLS certificate, Prometheus metrics and a Grafana dashboard. Every service shares the same Helm chart (`platform/charts/service`), owned by the platform team. See [ADR 5](docs/adr/0005-gitops-delivery.md).
+
+`bin/platformctl doctor` checks the platform health, and `make e2e` runs the whole golden path locally for every language.
+
+### Private repository access
+
+Argo CD and the cluster nodes read the repository and the images with two read-only tokens, passed through the environment before `make up`:
+
+```bash
+export PAVED_ROAD_GIT_TOKEN=...       # fine-grained: Contents read, this repository only
+export PAVED_ROAD_REGISTRY_TOKEN=...  # classic: read:packages only
+```
+
 ## Repository layout
 
 ```
@@ -80,9 +102,11 @@ hack/             helper scripts
 infra/cluster/    k3d cluster (Terraform)
 infra/platform/   platform foundation (Terraform + Helm)
 docs/adr/         architecture decision records
+platform/         shared service chart, Argo CD config, config.yaml
 cli/              platformctl, the golden path CLI (Go)
-templates/        service templates
+templates/        service templates (Python, Go)
 apps/             services deployed by Argo CD
+.github/          CI: lint, tests, image builds, e2e
 ```
 
 ## Roadmap

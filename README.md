@@ -72,6 +72,28 @@ make creds       # affiche les mots de passe admin
 
 `make bootstrap` choisit le profil selon la RAM de la machine. Pour le forcer : `make bootstrap PROFILE=lite`. Détails dans l'[ADR 4](docs/adr/0004-resource-profiles-and-supported-systems.md).
 
+## Golden path : créer un service
+
+```bash
+make cli                                          # compile bin/platformctl
+bin/platformctl new-service orders-api --lang go  # ou --lang python
+git add apps/orders-api && git commit -m "Add orders-api" && git push
+bin/platformctl status orders-api
+```
+
+`new-service` génère le code, les tests, un Dockerfile non-root et un `values.yaml`. Après le merge, la CI construit l'image et la pousse sur GHCR, puis Argo CD déploie le service sur https://orders-api.localhost avec un certificat TLS, des métriques Prometheus et un dashboard Grafana. Tous les services partagent le même chart Helm (`platform/charts/service`), maintenu par l'équipe plateforme. Détails dans l'[ADR 5](docs/adr/0005-gitops-delivery.md).
+
+`bin/platformctl doctor` vérifie l'état de la plateforme, et `make e2e` déroule tout le golden path en local pour chaque langage.
+
+### Accès au dépôt privé
+
+Argo CD et les nœuds du cluster lisent le dépôt et les images avec deux tokens en lecture seule, passés par l'environnement avant `make up` :
+
+```bash
+export PAVED_ROAD_GIT_TOKEN=...       # fine-grained : Contents read, ce dépôt uniquement
+export PAVED_ROAD_REGISTRY_TOKEN=...  # classic : read:packages uniquement
+```
+
 ## Structure du dépôt
 
 ```
@@ -80,9 +102,11 @@ hack/             scripts utilitaires
 infra/cluster/    cluster k3d (Terraform)
 infra/platform/   socle plateforme (Terraform + Helm)
 docs/adr/         décisions d'architecture
+platform/         chart partagé des services, config Argo CD, config.yaml
 cli/              platformctl, le CLI du golden path (Go)
-templates/        modèles de services
+templates/        modèles de services (Python, Go)
 apps/             services déployés par Argo CD
+.github/          CI : lint, tests, build des images, e2e
 ```
 
 ## Feuille de route

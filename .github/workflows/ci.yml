@@ -1,0 +1,167 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Lint infrastructure
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.3.0
+      - name: Install ansible-lint
+        run: pipx install --include-deps ansible-lint
+      - name: Install Ansible collections
+        run: cd ansible && ansible-galaxy collection install -r requirements.yml -p ./collections
+      - run: make lint
+
+  platformctl:
+    name: Test platformctl and the shared chart
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.3.0
+      - run: make test
+
+  discover:
+    name: Find changed services
+    runs-on: ubuntu-24.04
+    outputs:
+      services: ${{ steps.changed.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: changed
+        name: List services changed by this push or pull request
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          shopt -s nullglob
+          all=$(for f in apps/*/service.yaml; do basename "$(dirname "$f")"; done | sort)
+          if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            changed="$all"
+          else
+            changed=$(git diff --name-only "$BASE" HEAD -- apps | cut -d/ -f2 | sort -u | grep -Fxf <(echo "$all") || true)
+          fi
+          services=$(for s in $changed; do yq -o=json '{"name": .name, "language": .language}' "apps/$s/service.yaml"; done | jq -sc .)
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+          echo "Changed services: $services"
+
+  service:
+    name: Build ${{ matrix.service.name }}
+    needs: discover
+    if: needs.discover.outputs.services != '[]'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.discover.outputs.services) }}
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.service.name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - if: matrix.service.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - if: matrix.service.language == 'python'
+        name: Test (Python)
+        run: |
+          pip install -r requirements-dev.txt
+          python -m pytest -q
+
+      - if: matrix.service.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/${{ matrix.service.name }}/go.mod
+          cache-dependency-path: apps/${{ matrix.service.name }}/go.sum
+      - if: matrix.service.language == 'go'
+        name: Test (Go)
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Build the image
+        run: |
+          image="$(yq '.image.repository' values.yaml):${GITHUB_SHA::12}"
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+          docker build -t "$image" .
+
+      - if: github.event_name == 'push'
+        name: Push the image
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "$IMAGE"
+
+  release:
+    name: Point Argo CD at the new images
+    needs: [discover, service]
+    if: github.event_name == 'push' && needs.discover.outputs.services != '[]'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Commit the new image tags
+        env:
+          SERVICES: ${{ needs.discover.outputs.services }}
+        run: |
+          for name in $(jq -r '.[].name' <<<"$SERVICES"); do
+            yq -i ".image.tag = \"${GITHUB_SHA::12}\"" "apps/$name/values.yaml"
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release ${GITHUB_SHA::12}: $(jq -r 'map(.name) | join(", ")' <<<"$SERVICES")"
+          # Another release may have landed meanwhile; tags of other services are untouched.
+          git pull --rebase
+          # Pushes made with GITHUB_TOKEN do not trigger a new workflow run.
+          git push
+
+  e2e:
+    name: End-to-end (lite profile)
+    needs: [lint, platformctl]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Bootstrap the runner with Ansible
+        run: make bootstrap PROFILE=lite
+      - name: Create the cluster and install the platform
+        run: make up
+      - name: Run the golden path end to end
+        run: make e2e
+      - name: Dump the cluster state
+        if: failure()
+        run: |
+          export KUBECONFIG=$PWD/.kube/config
+          kubectl get pods -A -o wide
+          kubectl get events -A --sort-by=.lastTimestamp | tail -50

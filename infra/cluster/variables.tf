@@ -25,3 +25,10 @@ variable "kubeconfig_path" {
   description = "Where to write the cluster kubeconfig."
   type        = string
 }
+
+variable "registry_token" {
+  description = "Token allowed to pull service images (read:packages on GHCR). Empty for public images."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

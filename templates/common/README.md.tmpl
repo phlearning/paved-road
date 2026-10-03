@@ -1,0 +1,16 @@
+# [[ .Name ]]
+
+Service created with `platformctl new-service [[ .Name ]] --lang [[ .Language ]]`.
+
+| | |
+|---|---|
+| URL | https://[[ .Name ]].localhost |
+| Dashboard | Grafana, "Service / [[ .Name ]]" |
+| Status | `platformctl status [[ .Name ]]` |
+
+Endpoints: `/` (hello), `/healthz`, `/readyz`, `/metrics`.
+
+The deployment is described in `values.yaml` and rendered by the shared chart
+in `platform/charts/service`: the image runs as non-root with a read-only
+filesystem, gets a TLS certificate from the internal CA and is scraped by
+Prometheus.

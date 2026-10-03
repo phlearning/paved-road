@@ -12,21 +12,35 @@ terraform {
 # The k3d Terraform providers are unmaintained, so the cluster is described
 # by a declarative k3d config file and reconciled with the k3d CLI.
 # See docs/adr/0002-k3d-via-terraform-data.md.
-resource "local_file" "k3d_config" {
+locals {
+  config = yamldecode(file("${path.module}/../../platform/config.yaml"))
+
+  # "ghcr.io/owner/repo" -> host "ghcr.io", user "owner".
+  registry_host = split("/", local.config.registry)[0]
+  registry_user = split("/", local.config.registry)[1]
+}
+
+# Holds the registry token, hence the restricted file permissions.
+resource "local_sensitive_file" "k3d_config" {
   filename = "${path.module}/.generated/k3d.yaml"
   content = templatefile("${path.module}/k3d.yaml.tftpl", {
     cluster_name = var.cluster_name
     k3s_image    = var.k3s_image
     agents       = var.profile == "full" ? 1 : 0
+    registry = var.registry_token == "" ? null : {
+      host     = local.registry_host
+      username = local.registry_user
+      token    = var.registry_token
+    }
   })
 }
 
 resource "terraform_data" "cluster" {
-  triggers_replace = [local_file.k3d_config.content]
+  triggers_replace = [local_sensitive_file.k3d_config.content]
 
   input = {
     cluster_name    = var.cluster_name
-    config_path     = local_file.k3d_config.filename
+    config_path     = local_sensitive_file.k3d_config.filename
     kubeconfig_path = var.kubeconfig_path
   }
 

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["name", "image", "port"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z]([-a-z0-9]{0,38}[a-z0-9])?$",
+      "description": "DNS-1123 label, at most 40 characters."
+    },
+    "image": {
+      "type": "object",
+      "required": ["repository", "tag"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string", "minLength": 1 },
+        "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "replicas": { "type": "integer", "minimum": 0 },
+    "port": { "type": "integer", "minimum": 1024, "maximum": 65535 },
+    "env": { "type": "array" },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "host": { "type": "string" },
+        "clusterIssuer": { "type": "string" }
+      }
+    }
+  }
+}

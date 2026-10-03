@@ -1,0 +1,39 @@
+# Guardrails for services created by the golden path: they deploy from this
+# repository only, into their own namespaces, and cannot touch the platform.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: services
+  namespace: argocd
+spec:
+  description: Services created with platformctl new-service
+  sourceRepos:
+    - https://github.com/phlearning/paved-road.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "!kube-*"
+    - server: https://kubernetes.default.svc
+      namespace: "!argocd"
+    - server: https://kubernetes.default.svc
+      namespace: "!cert-manager"
+    - server: https://kubernetes.default.svc
+      namespace: "!monitoring"
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  # Namespaces are the only cluster-scoped objects a service may create.
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Service
+    - group: apps
+      kind: Deployment
+    - group: networking.k8s.io
+      kind: Ingress
+    - group: monitoring.coreos.com
+      kind: ServiceMonitor
+    - group: bitnami.com
+      kind: SealedSecret

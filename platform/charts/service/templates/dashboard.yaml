@@ -1,0 +1,13 @@
+{{- if .Values.dashboard.enabled }}
+# Picked up by the Grafana sidecar, which watches every namespace.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "service.name" . }}-dashboard
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  {{ include "service.name" . }}.json: |-
+    {{- .Files.Get "files/dashboard.json" | replace "__SERVICE__" (include "service.name" .) | replace "__NAMESPACE__" .Release.Namespace | nindent 4 }}
+{{- end }}

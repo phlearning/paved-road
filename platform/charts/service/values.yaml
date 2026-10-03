@@ -1,0 +1,44 @@
+# Defaults of the golden path. A service overrides them in apps/<name>/values.yaml.
+
+# Service name, also used for the namespace, the hostname and the dashboard.
+name: ""
+
+image:
+  repository: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+replicas: 1
+
+# Port the container listens on.
+port: 8080
+
+# Extra environment variables, as a list of EnvVar objects.
+env: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+probes:
+  liveness: /healthz
+  readiness: /readyz
+
+ingress:
+  enabled: true
+  # Defaults to <name>.localhost.
+  host: ""
+  clusterIssuer: paved-road-ca
+
+metrics:
+  enabled: true
+  path: /metrics
+  interval: 30s
+
+dashboard:
+  enabled: true

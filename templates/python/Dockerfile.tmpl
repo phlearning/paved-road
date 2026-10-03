@@ -1,0 +1,16 @@
+FROM python:3.14-slim AS build
+RUN python -m venv /opt/venv
+COPY requirements.txt .
+RUN /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.14-slim
+ENV PATH=/opt/venv/bin:$PATH \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+COPY --from=build /opt/venv /opt/venv
+WORKDIR /srv
+COPY app ./app
+# Numeric UID so Kubernetes can verify runAsNonRoot.
+USER 10001
+EXPOSE 8080
+CMD ["python", "-m", "app"]

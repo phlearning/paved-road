@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: paved-road-repo
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  type: git
+  url: {{ required "repoURL is required" .Values.repoURL | quote }}
+  {{- if .Values.token }}
+  username: {{ .Values.username | quote }}
+  password: {{ .Values.token | quote }}
+  {{- end }}

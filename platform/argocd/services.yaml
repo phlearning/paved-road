@@ -1,0 +1,44 @@
+# One Argo CD Application per directory in apps/: adding a service is a
+# pull request, nothing to register by hand.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: services
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/phlearning/paved-road.git
+        revision: main
+        directories:
+          - path: apps/*
+  template:
+    metadata:
+      name: "{{ .path.basename }}"
+      labels:
+        paved-road.io/service: "{{ .path.basename }}"
+    spec:
+      project: services
+      # The shared chart comes from platform/, the values from the service.
+      sources:
+        - repoURL: https://github.com/phlearning/paved-road.git
+          targetRevision: main
+          path: platform/charts/service
+          helm:
+            releaseName: "{{ .path.basename }}"
+            valueFiles:
+              - "$values/apps/{{ .path.basename }}/values.yaml"
+        - repoURL: https://github.com/phlearning/paved-road.git
+          targetRevision: main
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ .path.basename }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

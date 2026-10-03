@@ -26,3 +26,10 @@ variable "chart_versions" {
     argo_cd               = "10.9.6"
   }
 }
+
+variable "git_token" {
+  description = "Read-only token for a private Git repository (contents: read). Empty for a public repository."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

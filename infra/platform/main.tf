@@ -1,4 +1,7 @@
 locals {
+  # Settings shared with platformctl and the CI.
+  config = yamldecode(file("${path.module}/../../platform/config.yaml"))
+
   # Every platform UI gets a certificate from the internal CA through this annotation.
   cluster_issuer = "paved-road-ca"
 
@@ -132,6 +135,22 @@ resource "helm_release" "argo_cd" {
 
   # ServiceMonitor CRDs come from kube-prometheus-stack.
   depends_on = [helm_release.platform_pki, helm_release.kube_prometheus_stack]
+}
+
+# Connects Argo CD to the repository and hands platform/argocd over to it.
+resource "helm_release" "gitops" {
+  name      = "gitops"
+  namespace = "argocd"
+  chart     = "${path.module}/charts/gitops"
+
+  set = [
+    { name = "repoURL", value = local.config.repoURL },
+    { name = "revision", value = local.config.revision },
+    { name = "username", value = "paved-road" },
+  ]
+  set_sensitive = [{ name = "token", value = var.git_token }]
+
+  depends_on = [helm_release.argo_cd]
 }
 
 moved {

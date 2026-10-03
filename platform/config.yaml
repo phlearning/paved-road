@@ -1,0 +1,8 @@
+# Settings shared by platformctl, Argo CD and the CI.
+
+# Where service images are pushed, as <registry>/<service>:<tag>.
+registry: ghcr.io/phlearning/paved-road
+
+# Git repository Argo CD deploys from.
+repoURL: https://github.com/phlearning/paved-road.git
+revision: main

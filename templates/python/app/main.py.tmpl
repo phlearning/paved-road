@@ -1,0 +1,21 @@
+from fastapi import FastAPI
+
+from .metrics import instrument
+
+app = FastAPI(title="[[ .Name ]]")
+instrument(app)
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    return {"service": "[[ .Name ]]", "message": "Hello from the paved road"}
+
+
+@app.get("/healthz", include_in_schema=False)
+def healthz() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/readyz", include_in_schema=False)
+def readyz() -> dict[str, str]:
+    return {"status": "ready"}

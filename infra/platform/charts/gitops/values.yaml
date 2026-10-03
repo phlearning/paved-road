@@ -1,0 +1,5 @@
+repoURL: ""
+revision: main
+# Read-only credentials for a private repository; empty for a public one.
+username: ""
+token: ""
