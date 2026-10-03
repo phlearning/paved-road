@@ -49,9 +49,3 @@ grafana:
     dashboards:
       # Services ship their own dashboards as labelled ConfigMaps.
       searchNamespace: ALL
-  additionalDataSources:
-    - name: Loki
-      uid: loki
-      type: loki
-      access: proxy
-      url: http://loki.monitoring.svc:3100

@@ -1,0 +1,3 @@
+# Lite profile: no notification controller.
+notifications:
+  enabled: false

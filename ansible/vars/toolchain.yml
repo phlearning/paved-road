@@ -1,0 +1,49 @@
+---
+# Pinned versions of the toolchain installed from upstream binaries on Linux.
+# Digests are pinned here rather than fetched next to the download, so a
+# compromised release mirror cannot serve a matching checksum.
+toolchain_arch: "{{ {'x86_64': 'amd64', 'aarch64': 'arm64'}[ansible_facts['architecture']] }}"
+
+k3d_version: v5.9.0
+kubectl_version: v1.37.1
+helm_version: v4.3.0
+kubeseal_version: 0.40.0
+go_version: 1.27.1
+
+helm_archive: "helm-{{ helm_version }}-linux-{{ toolchain_arch }}.tar.gz"
+kubeseal_archive: "kubeseal-{{ kubeseal_version }}-linux-{{ toolchain_arch }}.tar.gz"
+go_archive: "go{{ go_version }}.linux-{{ toolchain_arch }}.tar.gz"
+
+toolchain_sha256:
+  amd64:
+    k3d: 06d8f25bc3a971c4eb29e0ff08429b180402db0f4dec838c9eac427e296800a0
+    kubectl: 65691ff77eb6fa44c908b77a1082c9f092c3b9733b5cefabec0d1104890e21a8
+    helm: 86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb
+    kubeseal: 9314c35916646e9d59c8f06b1314574b4e79c4d76f079433607ed7b697bb5eb7
+    go: 63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445
+  arm64:
+    k3d: 03cde5cf23e6e8e67de5a039ecf26e5b85aca82fba3e5d13dadf904cd218a250
+    kubectl: ff749f4b78d9c4f1ec87307df9b50119ed819e2094aa9810cb9acffc3286c8c7
+    helm: 31c5794dd55c66a51e6b7d2e2ac7a114ae8b1de41ff1d9ba51748ac973b06a08
+    kubeseal: d82f01e9226d194ca7ebc13e3619edefd596b5b433582bcec3d5a8e8b1a03123
+    go: 3450b45a3f9ee8568792736a5c5e70a1f2e9b36c35a8f74958c03e51d7d92bec
+
+# macOS gets the same tools from Homebrew.
+brew_packages:
+  - colima
+  - docker
+  - k3d
+  - kubernetes-cli
+  - helm
+  - kubeseal
+  - go
+  - ansible-lint
+  - shellcheck
+  - hashicorp/tap/terraform
+
+# Memory given to the Colima VM on macOS, per profile.
+colima_cpus: 4
+colima_disk_gib: 60
+colima_memory_gib:
+  full: 8
+  lite: 4

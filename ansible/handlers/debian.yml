@@ -1,0 +1,37 @@
+---
+- name: Install helm
+  become: true
+  ansible.builtin.unarchive:
+    src: "/usr/local/src/{{ helm_archive }}"
+    dest: /usr/local/bin
+    remote_src: true
+    include: ["linux-{{ toolchain_arch }}/helm"]
+    extra_opts: ["--strip-components=1"]
+
+- name: Install kubeseal
+  become: true
+  ansible.builtin.unarchive:
+    src: "/usr/local/src/{{ kubeseal_archive }}"
+    dest: /usr/local/bin
+    remote_src: true
+    include: [kubeseal]
+
+# Go must be unpacked into an empty directory, so both steps listen together.
+- name: Remove the previous Go installation
+  become: true
+  ansible.builtin.file:
+    path: /usr/local/go
+    state: absent
+  listen: Install Go
+
+- name: Unpack Go
+  become: true
+  ansible.builtin.unarchive:
+    src: "/usr/local/src/{{ go_archive }}"
+    dest: /usr/local
+    remote_src: true
+  listen: Install Go
+
+- name: Remind to refresh group membership
+  ansible.builtin.debug:
+    msg: "You were added to the 'docker' group: log out and back in (or run 'newgrp docker') before 'make up'."

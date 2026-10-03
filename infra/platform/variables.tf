@@ -3,6 +3,17 @@ variable "kubeconfig_path" {
   type        = string
 }
 
+variable "profile" {
+  description = "Resource profile: 'full' or 'lite' (no log pipeline, no Alertmanager, smaller requests)."
+  type        = string
+  default     = "full"
+
+  validation {
+    condition     = contains(["full", "lite"], var.profile)
+    error_message = "profile must be 'full' or 'lite'."
+  }
+}
+
 variable "chart_versions" {
   description = "Pinned Helm chart versions of the platform components."
   type        = map(string)

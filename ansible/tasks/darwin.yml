@@ -1,0 +1,33 @@
+---
+- name: Tap HashiCorp formulae
+  community.general.homebrew_tap:
+    name: hashicorp/tap
+    state: present
+
+- name: Install toolchain
+  community.general.homebrew:
+    name: "{{ brew_packages }}"
+    state: present
+
+- name: Check Colima status
+  ansible.builtin.command: colima status
+  register: colima_status
+  changed_when: false
+  failed_when: false
+
+- name: Start Colima
+  ansible.builtin.command: >-
+    colima start
+    --cpu {{ colima_cpus }}
+    --memory {{ colima_memory_gib[paved_road_profile] }}
+    --disk {{ colima_disk_gib }}
+  when: colima_status.rc != 0
+  changed_when: true
+
+- name: Wait for the Docker daemon
+  ansible.builtin.command: docker info --format '{{ "{{" }}.ServerVersion{{ "}}" }}'
+  register: docker_info
+  retries: 10
+  delay: 3
+  until: docker_info.rc == 0
+  changed_when: false

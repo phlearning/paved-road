@@ -1,61 +1,52 @@
 ---
-# Prepares the developer workstation: installs the platform toolchain and
-# starts a container runtime sized for the local cluster.
+# Prepares the developer workstation: installs the platform toolchain, makes
+# sure a container runtime is running and picks a resource profile.
 - name: Prepare workstation for paved-road
   hosts: localhost
   connection: local
   gather_facts: true
 
+  vars_files:
+    - vars/toolchain.yml
+
   vars:
-    colima_cpus: 4
-    colima_memory_gib: 8
-    colima_disk_gib: 60
-    brew_packages:
-      - colima
-      - docker
-      - k3d
-      - kubernetes-cli
-      - helm
-      - kubeseal
-      - go
-      - ansible-lint
-      - hashicorp/tap/terraform
+    # Hosts with less memory get the lite profile (see docs/adr/0004).
+    full_profile_min_memory_mb: 15000
+    detected_profile: "{{ 'full' if ansible_facts['memtotal_mb'] >= full_profile_min_memory_mb else 'lite' }}"
+    paved_road_profile: "{{ profile | default(detected_profile, true) }}"
+
+  handlers:
+    - name: Load Debian handlers
+      ansible.builtin.import_tasks: handlers/debian.yml
 
   tasks:
     - name: Fail on unsupported operating systems
       ansible.builtin.assert:
-        that: ansible_facts['os_family'] == 'Darwin'
-        fail_msg: "Only macOS is supported for now (Linux support lands with the CI e2e job)."
+        that: ansible_facts['os_family'] in ['Darwin', 'Debian']
+        fail_msg: "Supported systems: macOS, Debian, Ubuntu (including WSL2)."
 
-    - name: Tap HashiCorp formulae
-      community.general.homebrew_tap:
-        name: hashicorp/tap
-        state: present
+    - name: Fail on unknown profiles
+      ansible.builtin.assert:
+        that: paved_road_profile in ['full', 'lite']
+        fail_msg: "profile must be 'full' or 'lite', got '{{ paved_road_profile }}'."
 
-    - name: Install toolchain
-      community.general.homebrew:
-        name: "{{ brew_packages }}"
-        state: present
+    - name: Set up macOS
+      ansible.builtin.include_tasks: tasks/darwin.yml
+      when: ansible_facts['os_family'] == 'Darwin'
 
-    - name: Check Colima status
-      ansible.builtin.command: colima status
-      register: colima_status
-      changed_when: false
-      failed_when: false
+    - name: Set up Debian and Ubuntu
+      ansible.builtin.include_tasks: tasks/debian.yml
+      when: ansible_facts['os_family'] == 'Debian'
 
-    - name: Start Colima
-      ansible.builtin.command: >-
-        colima start
-        --cpu {{ colima_cpus }}
-        --memory {{ colima_memory_gib }}
-        --disk {{ colima_disk_gib }}
-      when: colima_status.rc != 0
-      changed_when: true
+    - name: Record the resource profile for make
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/../.paved-road.env"
+        content: "PROFILE={{ paved_road_profile }}\n"
+        mode: "0644"
 
-    - name: Wait for the Docker daemon
-      ansible.builtin.command: docker info --format '{{ "{{" }}.ServerVersion{{ "}}" }}'
-      register: docker_info
-      retries: 10
-      delay: 3
-      until: docker_info.rc == 0
-      changed_when: false
+    - name: Show the selected profile
+      ansible.builtin.debug:
+        msg: >-
+          Profile '{{ paved_road_profile }}' selected
+          ({{ ansible_facts['memtotal_mb'] }} MB of RAM detected).
+          Override with 'make bootstrap PROFILE=full|lite'.

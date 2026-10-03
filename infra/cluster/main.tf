@@ -17,7 +17,7 @@ resource "local_file" "k3d_config" {
   content = templatefile("${path.module}/k3d.yaml.tftpl", {
     cluster_name = var.cluster_name
     k3s_image    = var.k3s_image
-    agents       = var.agents
+    agents       = var.profile == "full" ? 1 : 0
   })
 }
 

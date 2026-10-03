@@ -1,0 +1,18 @@
+# Lite profile: keep metrics and dashboards, drop alert routing,
+# keep less history and ask for less memory.
+alertmanager:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    retention: 12h
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+
+grafana:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi

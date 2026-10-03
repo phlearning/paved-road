@@ -42,12 +42,16 @@ Design decisions are recorded in the [ADRs](docs/adr/).
 
 ## Quick start
 
-Requirements: macOS with [Homebrew](https://brew.sh) and 16 GB of RAM.
+| System | Requirements |
+|---|---|
+| macOS | [Homebrew](https://brew.sh) |
+| Debian, Ubuntu | `sudo apt-get install -y make` |
+| Windows | [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) with Ubuntu, then as Ubuntu |
 
 ```bash
-make bootstrap   # install the toolchain and start Colima (Ansible)
+make bootstrap   # install the toolchain, start Docker, pick a profile (Ansible)
 make up          # create the cluster and install the platform (Terraform)
-make trust       # trust the internal CA in the macOS keychain (sudo)
+make trust       # trust the internal CA (sudo)
 make creds       # print the admin passwords
 ```
 
@@ -58,10 +62,21 @@ make creds       # print the admin passwords
 
 `make down` deletes the cluster and `make help` lists every target.
 
+### Resource profiles
+
+| | `full` | `lite` |
+|---|---|---|
+| Recommended RAM | 16 GB | 8 GB |
+| Nodes | 2 | 1 |
+| Logs (Loki) and Alertmanager | yes | no |
+
+`make bootstrap` picks the profile from the machine's memory. To force it: `make bootstrap PROFILE=lite`. See [ADR 4](docs/adr/0004-resource-profiles-and-supported-systems.md).
+
 ## Repository layout
 
 ```
-ansible/          workstation setup
+ansible/          workstation setup (macOS, Debian/Ubuntu)
+hack/             helper scripts
 infra/cluster/    k3d cluster (Terraform)
 infra/platform/   platform foundation (Terraform + Helm)
 docs/adr/         architecture decision records
@@ -72,7 +87,7 @@ apps/             services deployed by Argo CD
 
 ## Roadmap
 
-- [x] **Foundation**: Ansible, k3d cluster via Terraform, Argo CD, cert-manager and internal CA, Prometheus/Grafana/Loki, Sealed Secrets
+- [x] **Foundation**: Ansible (macOS, Linux, WSL2), full and lite profiles, k3d cluster via Terraform, Argo CD, cert-manager and internal CA, Prometheus/Grafana/Loki, Sealed Secrets
 - [ ] **Golden path**: `platformctl` Go CLI, Python and Go templates, GitHub Actions CI, e2e test
 - [ ] **RAG assistant**: FastAPI, pgvector, Ollama or API, `platformctl ask`
 - [ ] **Polish**: OpenShift portability, Trivy scan, demo video

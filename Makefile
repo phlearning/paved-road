@@ -6,7 +6,18 @@ KUBECONFIG_PATH := $(CURDIR)/.kube/config
 TF_CLUSTER := infra/cluster
 TF_PLATFORM := infra/platform
 
+# Resource profile chosen by `make bootstrap` from the host memory (full or lite).
+-include .paved-road.env
+PROFILE ?= full
+
+# Ask for the sudo password on Linux unless sudo is passwordless (CI, cloud VMs).
+BECOME_FLAGS ?= $(shell [ "$$(uname -s)" = Linux ] && ! sudo -n true 2>/dev/null && echo --ask-become-pass)
+
+TF_VARS := -var kubeconfig_path=$(KUBECONFIG_PATH) -var profile=$(PROFILE)
+
 export KUBECONFIG := $(KUBECONFIG_PATH)
+# pipx installs Ansible there on Linux.
+export PATH := $(HOME)/.local/bin:$(PATH)
 
 .PHONY: help
 help: ## Show this help
@@ -14,30 +25,30 @@ help: ## Show this help
 
 .PHONY: bootstrap
 bootstrap: ## Install the toolchain and start the container runtime (Ansible)
-	@command -v ansible-playbook >/dev/null || brew install ansible
+	@hack/ensure-ansible.sh
 	cd ansible && ansible-galaxy collection install -r requirements.yml -p ./collections
-	cd ansible && ansible-playbook bootstrap.yml
+	cd ansible && ansible-playbook bootstrap.yml $(BECOME_FLAGS) \
+		$(if $(filter command line environment,$(origin PROFILE)),-e profile=$(PROFILE))
 
 .PHONY: up
-up: cluster platform ## Create the cluster and install the platform
+up: cluster platform ## Create the cluster and install the platform (PROFILE=full|lite)
 	@$(MAKE) --no-print-directory urls
 
 .PHONY: cluster
 cluster: ## Create the k3d cluster (Terraform)
 	terraform -chdir=$(TF_CLUSTER) init -input=false
 	terraform -chdir=$(TF_CLUSTER) apply -input=false -auto-approve \
-		-var cluster_name=$(CLUSTER_NAME) -var kubeconfig_path=$(KUBECONFIG_PATH)
+		-var cluster_name=$(CLUSTER_NAME) $(TF_VARS)
 
 .PHONY: platform
 platform: ## Install the platform components (Terraform + Helm)
 	terraform -chdir=$(TF_PLATFORM) init -input=false
-	terraform -chdir=$(TF_PLATFORM) apply -input=false -auto-approve \
-		-var kubeconfig_path=$(KUBECONFIG_PATH)
+	terraform -chdir=$(TF_PLATFORM) apply -input=false -auto-approve $(TF_VARS)
 
 .PHONY: down
 down: ## Destroy the cluster
 	-terraform -chdir=$(TF_CLUSTER) destroy -input=false -auto-approve \
-		-var cluster_name=$(CLUSTER_NAME) -var kubeconfig_path=$(KUBECONFIG_PATH)
+		-var cluster_name=$(CLUSTER_NAME) $(TF_VARS)
 	rm -f $(TF_PLATFORM)/terraform.tfstate $(TF_PLATFORM)/terraform.tfstate.backup
 
 .PHONY: ca
@@ -47,13 +58,12 @@ ca: ## Export the internal root CA to .kube/paved-road-ca.crt
 	@echo "CA written to .kube/paved-road-ca.crt"
 
 .PHONY: trust
-trust: ca ## Trust the internal root CA in the macOS keychain (asks for sudo)
-	sudo security add-trusted-cert -d -r trustRoot \
-		-k /Library/Keychains/System.keychain .kube/paved-road-ca.crt
+trust: ca ## Trust the internal root CA on this machine (asks for sudo)
+	hack/trust-ca.sh .kube/paved-road-ca.crt
 
 .PHONY: untrust
-untrust: ## Remove the internal root CA from the macOS keychain (asks for sudo)
-	sudo security delete-certificate -c "paved-road root CA" /Library/Keychains/System.keychain
+untrust: ## Remove the internal root CA from this machine (asks for sudo)
+	hack/trust-ca.sh .kube/paved-road-ca.crt --remove
 
 .PHONY: creds
 creds: ## Print the admin credentials of the platform UIs
@@ -75,4 +85,5 @@ lint: ## Lint Terraform and Ansible code
 	terraform fmt -check -recursive infra
 	terraform -chdir=$(TF_CLUSTER) validate
 	terraform -chdir=$(TF_PLATFORM) validate
-	cd ansible && ansible-lint bootstrap.yml
+	cd ansible && ansible-lint bootstrap.yml tasks/ vars/ handlers/
+	shellcheck hack/*.sh

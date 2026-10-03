@@ -1,0 +1,131 @@
+---
+- name: Install base packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - git
+      - gnupg
+      - make
+      - shellcheck
+    update_cache: true
+    cache_valid_time: 3600
+
+# Docker Desktop (WSL2) and CI runners already provide Docker: keep theirs.
+- name: Check for an existing Docker CLI
+  ansible.builtin.command: docker --version
+  register: docker_cli
+  changed_when: false
+  failed_when: false
+
+- name: Install Docker Engine
+  when: docker_cli.rc != 0
+  become: true
+  block:
+    - name: Add the Docker apt repository
+      ansible.builtin.deb822_repository:
+        name: docker
+        types: deb
+        uris: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}"
+        suites: "{{ ansible_facts['distribution_release'] }}"
+        components: stable
+        signed_by: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}/gpg"
+
+    - name: Install Docker packages
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        update_cache: true
+
+    - name: Start Docker
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+- name: Let the current user talk to Docker
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_facts['user_id'] }}"
+    groups: docker
+    append: true
+  notify: Remind to refresh group membership
+
+- name: Add the HashiCorp apt repository
+  become: true
+  ansible.builtin.deb822_repository:
+    name: hashicorp
+    types: deb
+    uris: https://apt.releases.hashicorp.com
+    suites: "{{ ansible_facts['distribution_release'] }}"
+    components: main
+    signed_by: https://apt.releases.hashicorp.com/gpg
+
+- name: Install Terraform
+  become: true
+  ansible.builtin.apt:
+    name: terraform
+    update_cache: true
+
+- name: Install single-binary tools
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "/usr/local/bin/{{ item.name }}"
+    checksum: "sha256:{{ toolchain_sha256[toolchain_arch][item.name] }}"
+    mode: "0755"
+  loop:
+    - name: k3d
+      url: "https://github.com/k3d-io/k3d/releases/download/{{ k3d_version }}/k3d-linux-{{ toolchain_arch }}"
+    - name: kubectl
+      url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/{{ toolchain_arch }}/kubectl"
+  loop_control:
+    label: "{{ item.name }}"
+
+# Archives are kept in /usr/local/src: a new version (new checksum) is
+# downloaded once and its handler unpacks it.
+- name: Download helm
+  become: true
+  ansible.builtin.get_url:
+    url: "https://get.helm.sh/{{ helm_archive }}"
+    dest: "/usr/local/src/{{ helm_archive }}"
+    checksum: "sha256:{{ toolchain_sha256[toolchain_arch]['helm'] }}"
+    mode: "0644"
+  notify: Install helm
+
+- name: Download kubeseal
+  become: true
+  ansible.builtin.get_url:
+    url: "https://github.com/bitnami/sealed-secrets/releases/download/v{{ kubeseal_version }}/{{ kubeseal_archive }}"
+    dest: "/usr/local/src/{{ kubeseal_archive }}"
+    checksum: "sha256:{{ toolchain_sha256[toolchain_arch]['kubeseal'] }}"
+    mode: "0644"
+  notify: Install kubeseal
+
+- name: Download Go
+  become: true
+  ansible.builtin.get_url:
+    url: "https://dl.google.com/go/{{ go_archive }}"
+    dest: "/usr/local/src/{{ go_archive }}"
+    checksum: "sha256:{{ toolchain_sha256[toolchain_arch]['go'] }}"
+    mode: "0644"
+  notify: Install Go
+
+- name: Put Go on the PATH of login shells
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/profile.d/go.sh
+    content: "export PATH=\"$PATH:/usr/local/go/bin:$HOME/go/bin\"\n"
+    mode: "0644"
+
+- name: Wait for the Docker daemon
+  become: true
+  ansible.builtin.command: docker info --format '{{ "{{" }}.ServerVersion{{ "}}" }}'
+  register: docker_info
+  retries: 10
+  delay: 3
+  until: docker_info.rc == 0
+  changed_when: false

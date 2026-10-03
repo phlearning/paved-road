@@ -12,3 +12,4 @@ crash.log
 ansible/collections/
 
 .DS_Store
+.paved-road.env

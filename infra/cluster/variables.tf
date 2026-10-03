@@ -10,10 +10,15 @@ variable "k3s_image" {
   default     = "rancher/k3s:v1.36.4-k3s1"
 }
 
-variable "agents" {
-  description = "Number of k3d agent nodes."
-  type        = number
-  default     = 1
+variable "profile" {
+  description = "Resource profile: 'full' (server + agent) or 'lite' (single node)."
+  type        = string
+  default     = "full"
+
+  validation {
+    condition     = contains(["full", "lite"], var.profile)
+    error_message = "profile must be 'full' or 'lite'."
+  }
 }
 
 variable "kubeconfig_path" {

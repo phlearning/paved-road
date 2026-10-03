@@ -1,6 +1,12 @@
 locals {
   # Every platform UI gets a certificate from the internal CA through this annotation.
   cluster_issuer = "paved-road-ca"
+
+  full = var.profile == "full"
+
+  # Profile-specific values are layered on top of the base values file.
+  kube_prometheus_stack_values = local.full ? ["kube-prometheus-stack-logs.yaml"] : ["kube-prometheus-stack-lite.yaml"]
+  argo_cd_values               = local.full ? [] : ["argo-cd-lite.yaml"]
 }
 
 # --- Secrets -----------------------------------------------------------------
@@ -72,13 +78,19 @@ resource "helm_release" "kube_prometheus_stack" {
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
   version    = var.chart_versions.kube_prometheus_stack
-  values     = [file("${path.module}/values/kube-prometheus-stack.yaml")]
-  timeout    = 600
+  values = [
+    for f in concat(["kube-prometheus-stack.yaml"], local.kube_prometheus_stack_values) :
+    file("${path.module}/values/${f}")
+  ]
+  timeout = 600
 
   depends_on = [helm_release.platform_pki, kubernetes_secret_v1.grafana_admin]
 }
 
+# The log pipeline is only part of the full profile.
 resource "helm_release" "loki" {
+  count = local.full ? 1 : 0
+
   name       = "loki"
   namespace  = kubernetes_namespace_v1.monitoring.metadata[0].name
   repository = "https://grafana.github.io/helm-charts"
@@ -91,6 +103,8 @@ resource "helm_release" "loki" {
 }
 
 resource "helm_release" "alloy" {
+  count = local.full ? 1 : 0
+
   name       = "alloy"
   namespace  = kubernetes_namespace_v1.monitoring.metadata[0].name
   repository = "https://grafana.github.io/helm-charts"
@@ -110,9 +124,22 @@ resource "helm_release" "argo_cd" {
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argo-cd"
   version          = var.chart_versions.argo_cd
-  values           = [file("${path.module}/values/argo-cd.yaml")]
-  timeout          = 600
+  values = [
+    for f in concat(["argo-cd.yaml"], local.argo_cd_values) :
+    file("${path.module}/values/${f}")
+  ]
+  timeout = 600
 
   # ServiceMonitor CRDs come from kube-prometheus-stack.
   depends_on = [helm_release.platform_pki, helm_release.kube_prometheus_stack]
+}
+
+moved {
+  from = helm_release.loki
+  to   = helm_release.loki[0]
+}
+
+moved {
+  from = helm_release.alloy
+  to   = helm_release.alloy[0]
 }

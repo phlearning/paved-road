@@ -1,0 +1,8 @@
+# Full profile: wire Grafana to the Loki log pipeline.
+grafana:
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      access: proxy
+      url: http://loki.monitoring.svc:3100
