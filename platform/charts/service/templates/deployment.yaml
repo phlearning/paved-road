@@ -19,12 +19,8 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       automountServiceAccountToken: false
-      # Non-root, read-only and without capabilities: also what OpenShift's
-      # restricted SCC expects.
       securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+        {{- include "service.podSecurityContext" . | nindent 8 }}
       containers:
         - name: app
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -33,11 +29,8 @@ spec:
             - name: http
               containerPort: {{ .Values.port }}
           env:
-            - name: PORT
-              value: {{ .Values.port | quote }}
-            {{- with .Values.env }}
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
+            {{- include "service.env" . | nindent 12 }}
+          {{- include "service.envFrom" . | nindent 10 }}
           livenessProbe:
             httpGet:
               path: {{ .Values.probes.liveness }}
@@ -49,10 +42,7 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: ["ALL"]
+            {{- include "service.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp

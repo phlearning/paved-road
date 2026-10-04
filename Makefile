@@ -13,12 +13,22 @@ PROFILE ?= full
 # Ask for the sudo password on Linux unless sudo is passwordless (CI, cloud VMs).
 BECOME_FLAGS ?= $(shell [ "$$(uname -s)" = Linux ] && ! sudo -n true 2>/dev/null && echo --ask-become-pass)
 
+# Stable Sealed Secrets key pair, kept outside the cluster (see docs/adr/0003).
+SEALING_KEY_DIR ?= $(HOME)/.config/paved-road/sealed-secrets
+
 TF_VARS := -var kubeconfig_path=$(KUBECONFIG_PATH) -var profile=$(PROFILE)
 
 # Read-only credentials for the private repository, taken from the environment
 # so they never land in Git (see docs/adr/0005-gitops-delivery.md):
 #   PAVED_ROAD_GIT_TOKEN       fine-grained token, Contents: read on the repository
 #   PAVED_ROAD_REGISTRY_TOKEN  classic token with read:packages, to pull images
+# They can also live in ~/.config/paved-road/env (KEY=value lines, chmod 600).
+-include $(HOME)/.config/paved-road/env
+
+# Applying without the tokens would remove Argo CD's access to the private
+# repository, so it is refused unless explicitly allowed (the CI does).
+REQUIRE_TOKENS ?= 1
+
 export TF_VAR_git_token := $(PAVED_ROAD_GIT_TOKEN)
 export TF_VAR_registry_token := $(PAVED_ROAD_REGISTRY_TOKEN)
 
@@ -41,16 +51,36 @@ bootstrap: ## Install the toolchain and start the container runtime (Ansible)
 up: cluster platform ## Create the cluster and install the platform (PROFILE=full|lite)
 	@$(MAKE) --no-print-directory urls
 
+.PHONY: check-tokens
+check-tokens:
+	@if [ "$(REQUIRE_TOKENS)" = 1 ] && { [ -z "$(PAVED_ROAD_GIT_TOKEN)" ] || [ -z "$(PAVED_ROAD_REGISTRY_TOKEN)" ]; }; then \
+		echo "PAVED_ROAD_GIT_TOKEN and PAVED_ROAD_REGISTRY_TOKEN must be set (environment or ~/.config/paved-road/env)."; \
+		echo "For a public repository or a throwaway cluster, run with REQUIRE_TOKENS=0."; \
+		exit 1; \
+	fi
+
 .PHONY: cluster
-cluster: ## Create the k3d cluster (Terraform)
+cluster: check-tokens ## Create the k3d cluster (Terraform)
 	terraform -chdir=$(TF_CLUSTER) init -input=false
 	terraform -chdir=$(TF_CLUSTER) apply -input=false -auto-approve \
 		-var cluster_name=$(CLUSTER_NAME) $(TF_VARS)
 
 .PHONY: platform
-platform: ## Install the platform components (Terraform + Helm)
+platform: check-tokens sealing-key ## Install the platform components (Terraform + Helm)
 	terraform -chdir=$(TF_PLATFORM) init -input=false
-	terraform -chdir=$(TF_PLATFORM) apply -input=false -auto-approve $(TF_VARS)
+	terraform -chdir=$(TF_PLATFORM) apply -input=false -auto-approve $(TF_VARS) \
+		-var sealing_key_dir=$(SEALING_KEY_DIR)
+
+.PHONY: sealing-key
+sealing-key: ## Create the stable Sealed Secrets key pair once
+	@if [ ! -f "$(SEALING_KEY_DIR)/tls.key" ]; then \
+		mkdir -p "$(SEALING_KEY_DIR)" && chmod 700 "$(SEALING_KEY_DIR)"; \
+		openssl req -x509 -nodes -newkey rsa:4096 -days 3650 \
+			-subj "/CN=sealed-secret/O=paved-road" \
+			-keyout "$(SEALING_KEY_DIR)/tls.key" -out "$(SEALING_KEY_DIR)/tls.crt" 2>/dev/null; \
+		chmod 600 "$(SEALING_KEY_DIR)/tls.key"; \
+		echo "Sealed Secrets key pair created in $(SEALING_KEY_DIR)"; \
+	fi
 
 .PHONY: down
 down: ## Destroy the cluster

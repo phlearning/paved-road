@@ -2,8 +2,6 @@ package commands
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"net/http"
@@ -124,16 +122,10 @@ func checkIssuer(ctx context.Context, c *kube.Client) error {
 // checkHTTPS calls Argo CD through Traefik and verifies the certificate
 // against the root CA read from the cluster, as a browser trusting it would.
 func checkHTTPS(ctx context.Context, c *kube.Client) error {
-	secret, err := c.Core.CoreV1().Secrets("cert-manager").Get(ctx, "paved-road-root-ca", metav1.GetOptions{})
+	httpClient, err := c.HTTPClient(ctx)
 	if err != nil {
-		return fmt.Errorf("read root CA: %w", err)
+		return err
 	}
-	pool := x509.NewCertPool()
-	if !pool.AppendCertsFromPEM(secret.Data["ca.crt"]) {
-		return errors.New("root CA secret has no valid ca.crt")
-	}
-	httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}}
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://argocd.localhost/healthz", nil)
 	if err != nil {
 		return err

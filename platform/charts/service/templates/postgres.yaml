@@ -1,0 +1,31 @@
+{{- if .Values.postgres.enabled }}
+# The operator creates the database, the "app" owner and the
+# <name>-db-app secret holding its connection string.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "service.name" . }}-db
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+spec:
+  instances: {{ .Values.postgres.instances }}
+  imageName: {{ .Values.postgres.image }}
+  storage:
+    size: {{ .Values.postgres.storage }}
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      {{- with .Values.postgres.extensions }}
+      postInitApplicationSQL:
+        {{- range . }}
+        - CREATE EXTENSION IF NOT EXISTS "{{ . }}";
+        {{- end }}
+      {{- end }}
+{{- end }}

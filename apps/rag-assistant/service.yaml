@@ -1,0 +1,13 @@
+# Golden path metadata, read by platformctl and the CI.
+name: rag-assistant
+language: python
+owner: Pierre-Henri Vong
+
+build:
+  # Relative to this directory: the repository root, to ship docs/ in the image.
+  context: ../..
+  # Rebuild (and re-index) when the documentation changes, relative to the repository root.
+  watch:
+    - docs
+    - README.md
+    - README.en.md

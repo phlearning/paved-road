@@ -24,6 +24,8 @@ variable "chart_versions" {
     loki                  = "7.3.0"
     alloy                 = "1.13.0"
     argo_cd               = "10.9.6"
+    cloudnative_pg        = "0.29.1"
+    ollama                = "1.85.0"
   }
 }
 
@@ -32,4 +34,10 @@ variable "git_token" {
   type        = string
   default     = ""
   sensitive   = true
+}
+
+variable "sealing_key_dir" {
+  description = "Directory holding a stable Sealed Secrets key pair (tls.crt, tls.key). Empty or missing: the controller generates a new key."
+  type        = string
+  default     = ""
 }

@@ -36,9 +36,12 @@ flowchart LR
 | Delivery | Argo CD (GitOps, app-of-apps) |
 | Networking and TLS | Traefik, cert-manager with an internal CA |
 | Observability | Prometheus, Grafana, Loki, Alloy |
-| Secrets | Sealed Secrets |
+| Secrets | Sealed Secrets, `platformctl seal` |
+| Databases | Self-service CloudNativePG (PostgreSQL 18, pgvector) |
+| AI | Shared Ollama (`qwen3:1.7b`), or Claude through the API |
+| Supply chain security | Trivy (configuration, rendered chart, images), multi-arch amd64/arm64 images |
 
-Design decisions are recorded in the [ADRs](docs/adr/).
+Design decisions are recorded in the [ADRs](docs/adr/), and the [guides](docs/guides/) cover day-to-day use.
 
 ## Quick start
 
@@ -85,6 +88,20 @@ bin/platformctl status orders-api
 
 `bin/platformctl doctor` checks the platform health, and `make e2e` runs the whole golden path locally for every language.
 
+### Self-service capabilities
+
+A service turns them on in its `values.yaml`, without writing Kubernetes manifests:
+
+| Capability | Key | What the platform does |
+|---|---|---|
+| PostgreSQL database | `postgres.enabled` | the operator creates the database, credentials arrive in `DATABASE_URL` |
+| Post-deployment jobs | `jobs` | migrations, indexing... after every successful deployment |
+| Secrets | `secrets` | values encrypted by `platformctl seal`, injected as environment variables |
+| Dashboard | `dashboard.panels` | service-specific panels added to the standard dashboard |
+| Shared LLM | `http://ollama.ai.svc:11434` | common model server (full profile) |
+
+See the [platform-capabilities](docs/guides/platform-capabilities.md) guide.
+
 ### Private repository access
 
 Argo CD and the cluster nodes read the repository and the images with two read-only tokens, passed through the environment before `make up`:
@@ -93,6 +110,16 @@ Argo CD and the cluster nodes read the repository and the images with two read-o
 export PAVED_ROAD_GIT_TOKEN=...       # fine-grained: Contents read, this repository only
 export PAVED_ROAD_REGISTRY_TOKEN=...  # classic: read:packages only
 ```
+
+## Platform assistant
+
+[`rag-assistant`](apps/rag-assistant/) is the first service created with the golden path. It answers developer questions from `docs/`, in the language of the question, citing its sources:
+
+```bash
+bin/platformctl ask "How do I add a PostgreSQL database to my service?"
+```
+
+It is a RAG: multilingual embeddings in-process, pgvector on the database provided by the platform, indexing by a Job after each deployment, and the shared LLM. Retrieval quality is measured (recall@4 of 100% on 12 reference questions). Design and measurements in [ADR 6](docs/adr/0006-rag-assistant.md).
 
 ## Repository layout
 
@@ -113,5 +140,6 @@ apps/             services deployed by Argo CD
 
 - [x] **Foundation**: Ansible (macOS, Linux, WSL2), full and lite profiles, k3d cluster via Terraform, Argo CD, cert-manager and internal CA, Prometheus/Grafana/Loki, Sealed Secrets
 - [x] **Golden path**: `platformctl` Go CLI, Python and Go templates, GitHub Actions CI, e2e test
-- [ ] **RAG assistant**: FastAPI, pgvector, Ollama or API, `platformctl ask`
-- [ ] **Polish**: OpenShift portability, Trivy scan, demo video
+- [x] **RAG assistant**: FastAPI, pgvector, Ollama or API, `platformctl ask`, retrieval evaluation
+- [x] **Security and portability**: Trivy scans in CI, multi-arch images, [OpenShift portability](docs/adr/0007-openshift-portability.md)
+- [ ] **Demo**: video

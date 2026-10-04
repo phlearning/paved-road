@@ -37,3 +37,7 @@ spec:
       kind: ServiceMonitor
     - group: bitnami.com
       kind: SealedSecret
+    - group: batch
+      kind: Job
+    - group: postgresql.cnpg.io
+      kind: Cluster

@@ -23,9 +23,13 @@ the "one command, no account" goal.
 
 ## Consequences
 
-- Developers seal secrets with `kubeseal`; the sealing key lives in
-  `kube-system` and is regenerated with the cluster, so sealed files are tied
-  to one cluster.
+- Developers seal secrets with `platformctl seal SERVICE KEY`, which writes
+  the ciphertext into the service's `values.yaml` (strict scope: it only
+  decrypts for that service).
+- The sealing key pair is created once in `~/.config/paved-road/sealed-secrets/`
+  and installed by `make platform`, so sealed values survive
+  `make down && make up`. Losing that directory means re-sealing every value;
+  another developer's machine has a different key.
 - In production, especially in a regulated environment, External Secrets with
   Vault (or the cloud provider's secret manager) is the better choice: central
   rotation, audit trail, short-lived credentials and no key material tied to a

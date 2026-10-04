@@ -1,0 +1,10 @@
+fastapi==0.142.2
+uvicorn==0.54.0
+prometheus-client==0.26.0
+fastembed==0.8.1
+psycopg[binary]==3.3.6
+pgvector==0.5.0
+anthropic==1.11.0
+httpx2==2.13.1
+# Security floor for a transitive dependency (Trivy, CVE-2026-97687/97689).
+urllib3==2.8.0

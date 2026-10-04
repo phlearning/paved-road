@@ -1,0 +1,4 @@
+# Operator behind the golden path's "postgres.enabled" switch: a service asks
+# for a database in its values, the operator creates it and its credentials.
+monitoring:
+  podMonitorEnabled: true

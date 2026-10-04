@@ -1,13 +1,31 @@
 {{- if .Values.dashboard.enabled }}
+{{- $service := include "service.name" . }}
+{{- $json := .Files.Get "files/dashboard.json" | replace "__SERVICE__" $service | replace "__NAMESPACE__" .Release.Namespace }}
+{{- $dashboard := fromJson $json }}
+{{- /* Service-specific panels from values, two per row below the standard ones. */}}
+{{- $panels := $dashboard.panels }}
+{{- range $i, $p := .Values.dashboard.panels }}
+{{- $expr := $p.expr | replace "$namespace" $.Release.Namespace }}
+{{- $panel := dict
+      "id" (add 100 $i)
+      "type" "timeseries"
+      "title" $p.title
+      "datasource" (dict "type" "prometheus" "uid" "prometheus")
+      "gridPos" (dict "x" (mul (mod $i 2) 12) "y" (add 20 (mul (div $i 2) 8)) "w" 12 "h" 8)
+      "fieldConfig" (dict "defaults" (dict "unit" (default "short" $p.unit)) "overrides" list)
+      "targets" (list (dict "refId" "A" "datasource" (dict "type" "prometheus" "uid" "prometheus") "expr" $expr "legendFormat" (default "" $p.legend))) }}
+{{- $panels = append $panels $panel }}
+{{- end }}
+{{- $_ := set $dashboard "panels" $panels }}
 # Picked up by the Grafana sidecar, which watches every namespace.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "service.name" . }}-dashboard
+  name: {{ $service }}-dashboard
   labels:
     {{- include "service.labels" . | nindent 4 }}
     grafana_dashboard: "1"
 data:
-  {{ include "service.name" . }}.json: |-
-    {{- .Files.Get "files/dashboard.json" | replace "__SERVICE__" (include "service.name" .) | replace "__NAMESPACE__" .Release.Namespace | nindent 4 }}
+  {{ $service }}.json: |-
+    {{- toPrettyJson $dashboard | nindent 4 }}
 {{- end }}

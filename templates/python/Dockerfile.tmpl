@@ -1,9 +1,15 @@
 FROM python:3.14-slim AS build
 RUN python -m venv /opt/venv
 COPY requirements.txt .
-RUN /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+RUN /opt/venv/bin/pip install --no-cache-dir -r requirements.txt \
+    # pip is not needed at runtime (and vendors its own dependencies).
+    && /opt/venv/bin/python -m pip uninstall -y -q pip
 
 FROM python:3.14-slim
+# Security fixes published since the base image was built; no pip at runtime.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall -y -q pip
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1

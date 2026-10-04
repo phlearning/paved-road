@@ -1,0 +1,51 @@
+# Deployment settings for the shared chart in platform/charts/service.
+# The CI updates image.tag on every merge to main.
+name: rag-assistant
+
+image:
+  repository: ghcr.io/phlearning/paved-road/rag-assistant
+  tag: latest
+
+port: 8080
+
+# The embedding model runs in-process.
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    memory: 1Gi
+
+env:
+  # The platform's shared model server (full profile). On the lite profile,
+  # switch to "anthropic" and seal ANTHROPIC_API_KEY with platformctl seal.
+  - name: LLM_PROVIDER
+    value: ollama
+  - name: OLLAMA_URL
+    value: http://ollama.ai.svc:11434
+
+postgres:
+  enabled: true
+  extensions:
+    - vector
+
+# Re-index the documentation baked into the new image after each deployment.
+jobs:
+  - name: ingest
+    args: ["python", "-m", "app.ingest"]
+
+# Assistant-specific panels, below the standard HTTP ones.
+dashboard:
+  panels:
+    - title: Answer latency by stage (p95)
+      expr: histogram_quantile(0.95, sum by (le, stage) (rate(rag_stage_duration_seconds_bucket{namespace="$namespace"}[5m])))
+      unit: s
+      legend: "{{stage}}"
+    - title: Answers by outcome
+      expr: sum by (outcome) (increase(rag_answers_total{namespace="$namespace"}[1h]))
+      unit: short
+      legend: "{{outcome}}"
+    - title: LLM tokens per minute
+      expr: sum by (direction) (rate(rag_llm_tokens_total{namespace="$namespace"}[5m])) * 60
+      unit: short
+      legend: "{{direction}}"

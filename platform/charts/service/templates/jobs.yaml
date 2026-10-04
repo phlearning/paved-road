@@ -1,0 +1,44 @@
+{{- range .Values.jobs }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "service.name" $ }}-{{ .name }}
+  labels:
+    {{- include "service.labels" $ | nindent 4 }}
+  annotations:
+    # Argo CD runs Helm post-install/post-upgrade hooks as PostSync hooks.
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 4
+  template:
+    metadata:
+      labels:
+        {{- include "service.selectorLabels" $ | nindent 8 }}
+        paved-road.io/job: {{ .name }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "service.podSecurityContext" $ | nindent 8 }}
+      containers:
+        - name: {{ .name }}
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          args:
+            {{- toYaml .args | nindent 12 }}
+          env:
+            {{- include "service.env" $ | nindent 12 }}
+          {{- include "service.envFrom" $ | nindent 10 }}
+          resources:
+            {{- toYaml $.Values.resources | nindent 12 }}
+          securityContext:
+            {{- include "service.containerSecurityContext" $ | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

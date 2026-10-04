@@ -1,0 +1,12 @@
+# Every capability turned on, so the security scan covers every template.
+name: scan
+image:
+  repository: scan
+  tag: scan
+postgres:
+  enabled: true
+secrets:
+  KEY: x
+jobs:
+  - name: job
+    args: [run]

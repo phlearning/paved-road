@@ -3,7 +3,11 @@ package kube
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -111,4 +115,18 @@ func (c *Client) ClusterIssuerReady(ctx context.Context, name string) (bool, err
 		}
 	}
 	return false, nil
+}
+
+// HTTPClient returns an HTTP client that trusts the platform's internal root
+// CA, read from the cluster, as a browser would after `make trust`.
+func (c *Client) HTTPClient(ctx context.Context) (*http.Client, error) {
+	secret, err := c.Core.CoreV1().Secrets("cert-manager").Get(ctx, "paved-road-root-ca", metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("read root CA: %w", err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(secret.Data["ca.crt"]) {
+		return nil, errors.New("root CA secret has no valid ca.crt")
+	}
+	return &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}}, nil
 }

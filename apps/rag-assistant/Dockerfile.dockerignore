@@ -1,0 +1,8 @@
+# The build context is the whole repository: only send what the image needs.
+*
+!apps/rag-assistant/requirements.txt
+!apps/rag-assistant/app
+!docs
+!README.md
+!README.en.md
+**/__pycache__

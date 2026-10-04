@@ -35,10 +35,13 @@ Application that syncs `platform/argocd` (app of apps). It contains:
   service's `values.yaml` (Argo CD multiple sources).
 
 **CI.** On every pull request: lint (Terraform, Ansible, shell, workflows),
-Go tests, chart lint, tests and image build of the changed services, and an
-end-to-end run on a fresh Ubuntu runner (Ansible bootstrap, `make up` in the
-lite profile, `hack/e2e.sh`). On `main`, the images are pushed to GHCR and a
-bot commit sets the new tag in `values.yaml`; Argo CD deploys that commit.
+a Trivy scan of the configuration and of the fully rendered shared chart, Go
+tests, chart lint, then for each changed service its tests, an image build
+and a Trivy scan that fails on fixable HIGH or CRITICAL vulnerabilities, and
+an end-to-end run on a fresh Ubuntu runner (Ansible bootstrap, `make up` in
+the lite profile, `hack/e2e.sh`). On `main`, the images are pushed to GHCR
+for amd64 and arm64 (laptops are often Apple Silicon) and a bot commit sets
+the new tag in `values.yaml`; Argo CD deploys that commit.
 
 **Credentials.** Two read-only tokens, read from the environment by
 Terraform and never committed:

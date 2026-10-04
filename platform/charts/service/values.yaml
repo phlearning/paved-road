@@ -42,3 +42,30 @@ metrics:
 
 dashboard:
   enabled: true
+  # Extra panels appended to the standard dashboard. "$namespace" in expr is
+  # replaced by the service namespace.
+  # - title: Queue depth
+  #   expr: sum(queue_depth{namespace="$namespace"})
+  #   unit: short          # Grafana unit: s, bytes, reqps, percentunit...
+  #   legend: "{{queue}}"
+  panels: []
+
+# Self-service PostgreSQL, run by the CloudNativePG operator. The connection
+# string reaches the service (and its jobs) as DATABASE_URL.
+postgres:
+  enabled: false
+  instances: 1
+  storage: 1Gi
+  image: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+  # Extensions created in the database, for example [vector].
+  extensions: []
+
+# Jobs run with the service image after every successful deployment
+# (Helm post-install/post-upgrade hooks, PostSync in Argo CD).
+# - name: migrate
+#   args: ["python", "-m", "app.migrate"]
+jobs: []
+
+# Secrets sealed with `platformctl seal`: KEY -> ciphertext. They reach the
+# service as environment variables; only this cluster can decrypt them.
+secrets: {}
