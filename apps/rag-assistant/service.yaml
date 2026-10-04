@@ -8,6 +8,7 @@ build:
   context: ../..
   # Rebuild (and re-index) when the documentation changes, relative to the repository root.
   watch:
-    - docs
+    - docs/guides
+    - docs/adr
     - README.md
     - README.en.md

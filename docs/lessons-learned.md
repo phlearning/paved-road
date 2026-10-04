@@ -13,6 +13,7 @@ cause, correctif, ce que ça montre.
 | 3 | IA, qualité | Recherche à 83 % à cause de titres vagues | Titres explicites, mesure à chaque déploiement |
 | 4 | IA, qualité | Régression détectée en ajoutant des documents | Jeu de référence corrigé, mesures conservées dans l'ADR |
 | 5 | IA, qualité | Le petit modèle répondait en anglais à des questions en français | Consigne finale écrite dans la langue de la question |
+| 5 bis | IA, qualité | Ce document lui-même faisait baisser la recherche | Corpus limité à la documentation utilisateur |
 | 6 | IA, capacité | `qwen3:4b` ne tient pas dans une VM de 8 Go | Rester sur `qwen3:1.7b`, Claude via API en option |
 | 7 | Sécurité | Le scan Trivy du chart ignorait le Job | Scan du rendu complet `helm template` |
 | 8 | Sécurité | Vulnérabilités HIGH dans l'image Python | Plus de `pip` à l'exécution, dépendance épinglée, mises à jour Debian |
@@ -100,6 +101,19 @@ cause, correctif, ce que ça montre.
   réponses sont en français. Le code accepte aussi Claude via l'API quand la qualité compte.
 - **Ce que ça montre** : avec un petit modèle, la position et la langue d'une
   consigne comptent plus que sa formulation.
+
+### 5 bis. Ce document faisait baisser la qualité de la recherche
+
+- **Symptôme** : au déploiement qui l'a ajouté, le Job d'indexation signale
+  un recall@5 de 92 % au lieu de 100 %.
+- **Cause** : ce retour d'expérience cite mot pour mot une question de
+  référence (« Comment créer un nouveau service ? », incident 3). Il passait
+  donc devant le guide qui y répond vraiment.
+- **Correctif** : l'image ne contient plus que la documentation utilisateur
+  (`docs/guides`, `docs/adr` et les READMEs). Recall@5 de nouveau à 100 %.
+- **Ce que ça montre** : l'évaluation automatique à chaque déploiement a
+  détecté le problème sans que personne ne pose de question. Et le choix du
+  corpus est une décision de conception, pas « tout ce qui est dans docs/ ».
 
 ### 6. Un modèle plus gros ne tient pas dans le budget mémoire
 

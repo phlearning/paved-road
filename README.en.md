@@ -6,6 +6,8 @@
 
 The first service shipped through the golden path is a RAG assistant that answers developer questions from the platform's own documentation.
 
+![Terminal demo: doctor, status, new-service and the assistant](demo/platformctl.gif)
+
 ## Architecture
 
 ```mermaid

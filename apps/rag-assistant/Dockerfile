@@ -26,8 +26,11 @@ COPY --from=build /opt/venv /opt/venv
 COPY --from=build /opt/models /opt/models
 WORKDIR /srv
 COPY apps/rag-assistant/app ./app
-# The corpus: platform docs, ADRs and both READMEs.
-COPY docs ./corpus/docs
+# The corpus is the user documentation: guides, ADRs and both READMEs.
+# docs/lessons-learned.md is a retrospective for humans; it quotes the
+# reference questions and pushed the guides out of the top results.
+COPY docs/guides ./corpus/docs/guides
+COPY docs/adr ./corpus/docs/adr
 COPY README.md README.en.md ./corpus/
 # Numeric UID so Kubernetes can verify runAsNonRoot.
 USER 10001

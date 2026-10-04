@@ -2,7 +2,8 @@
 *
 !apps/rag-assistant/requirements.txt
 !apps/rag-assistant/app
-!docs
+!docs/guides
+!docs/adr
 !README.md
 !README.en.md
 **/__pycache__

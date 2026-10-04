@@ -31,7 +31,8 @@ offers to every team.
 | Observability | Stage latency, answers by outcome and tokens, as panels in the service dashboard | Same dashboard as every service, plus three panels declared in `values.yaml` |
 
 The image is built from the repository root (`build.context`) so it carries
-`docs/` and both READMEs, and rebuilt when they change (`build.watch`).
+`docs/guides`, `docs/adr` and both READMEs, and rebuilt when they change
+(`build.watch`).
 
 ## Measurements
 
@@ -46,6 +47,13 @@ every indexing and logs recall@1, @3 and @5
 | Explicit headings ("Scaffold it" became "Create the service with platformctl new-service") | 12 | 67% | 83% | 100% |
 | Context raised to 5 excerpts; READMEs and ADR 6 added to the corpus | 14 | 67% | 75% | 92% |
 | Expected sections widened: the READMEs' own "create a service" sections are valid answers too | 14 | 67% | 75% | 100% |
+| docs/lessons-learned.md added to the corpus | 15 | 58% | 75% | 92% |
+| Corpus restricted to user documentation (guides, ADRs, READMEs) | 14 | 58% | 75% | 100% |
+
+The fifth row is another regression the job caught on its own: the
+retrospective quotes the reference questions word for word, so it outranked
+the guides that actually answer them. A retrospective is not user
+documentation; the image now ships `docs/guides` and `docs/adr` only.
 
 The third row is a regression caught by the evaluation: the new French
 README section answered the French question better than the English guide,
