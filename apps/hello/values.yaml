@@ -1,0 +1,9 @@
+# Deployment settings for the shared chart in platform/charts/service.
+# The CI updates image.tag on every merge to main.
+name: hello
+
+image:
+  repository: ghcr.io/phlearning/paved-road/hello
+  tag: latest
+
+port: 8080

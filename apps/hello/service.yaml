@@ -1,0 +1,4 @@
+# Golden path metadata, read by platformctl and the CI.
+name: hello
+language: go
+owner: Pierre-Henri Vong
