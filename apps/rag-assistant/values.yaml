@@ -3,7 +3,7 @@
 name: rag-assistant
 image:
   repository: ghcr.io/phlearning/paved-road/rag-assistant
-  tag: 14dbbc16a810
+  tag: 56b14cadd264
 port: 8080
 # The embedding model runs in-process.
 resources:
