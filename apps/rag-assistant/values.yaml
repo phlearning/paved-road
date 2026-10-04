@@ -1,13 +1,10 @@
 # Deployment settings for the shared chart in platform/charts/service.
 # The CI updates image.tag on every merge to main.
 name: rag-assistant
-
 image:
   repository: ghcr.io/phlearning/paved-road/rag-assistant
-  tag: latest
-
+  tag: 6293c1d3d295
 port: 8080
-
 # The embedding model runs in-process.
 resources:
   requests:
@@ -15,7 +12,6 @@ resources:
     memory: 384Mi
   limits:
     memory: 1Gi
-
 env:
   # The platform's shared model server (full profile). On the lite profile,
   # switch to "anthropic" and seal ANTHROPIC_API_KEY with platformctl seal.
@@ -23,17 +19,14 @@ env:
     value: ollama
   - name: OLLAMA_URL
     value: http://ollama.ai.svc:11434
-
 postgres:
   enabled: true
   extensions:
     - vector
-
 # Re-index the documentation baked into the new image after each deployment.
 jobs:
   - name: ingest
     args: ["python", "-m", "app.ingest"]
-
 # Assistant-specific panels, below the standard HTTP ones.
 dashboard:
   panels:

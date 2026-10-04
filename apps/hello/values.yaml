@@ -3,5 +3,5 @@
 name: hello
 image:
   repository: ghcr.io/phlearning/paved-road/hello
-  tag: 385bdcc5a569
+  tag: 6293c1d3d295
 port: 8080
