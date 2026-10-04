@@ -35,15 +35,23 @@ The image is built from the repository root (`build.context`) so it carries
 
 ## Measurements
 
-Retrieval is measured by `python -m app.evaluate`: 12 questions (9 in French,
-3 in English), each with the section that should be retrieved.
+Retrieval is measured on 12 questions (9 in French, 3 in English), each
+listing the sections that answer it. The ingest job runs this evaluation after
+every indexing and logs recall@1, @3 and @5
+(`kubectl -n rag-assistant logs job/rag-assistant-ingest`).
 
-| Change | recall@1 | recall@4 |
-|---|---|---|
-| First version | 67% | 83% |
-| Explicit headings ("Scaffold it" became "Create the service with platformctl new-service") | 67% | 100% |
+| Change | Documents | recall@1 | recall@3 | recall@k |
+|---|---|---|---|---|
+| First version (k=4) | 12 | 67% | 83% | 83% |
+| Explicit headings ("Scaffold it" became "Create the service with platformctl new-service") | 12 | 67% | 83% | 100% |
+| Context raised to 5 excerpts; READMEs and ADR 6 added to the corpus | 14 | 67% | 75% | 92% |
+| Expected sections widened: the READMEs' own "create a service" sections are valid answers too | 14 | 67% | 75% | 100% |
 
-The context size was then raised from 4 to 5 excerpts to keep a margin.
+The third row is a regression caught by the evaluation: the new French
+README section answered the French question better than the English guide,
+and the reference set only accepted the guide. The correct sections are
+almost always retrieved, but often not first; a re-ranking step would be the
+next improvement.
 
 Generation, on a 4-vCPU laptop VM:
 
@@ -59,7 +67,9 @@ Generation, on a 4-vCPU laptop VM:
 - With an Anthropic API key sealed in `values.yaml` (`platformctl seal`) and
   `LLM_PROVIDER=anthropic`, the same retrieval feeds a much stronger model.
   This is also the only option on the lite profile.
-- The retrieval evaluation runs against the live index; it should run in CI
-  once a test database is available there.
+- The retrieval evaluation runs in the ingest job, against the live index, but
+  does not fail the deployment; gating on it in CI needs a test database there.
+- Running the evaluation inside the serving container loads a second copy of
+  the embedding model and exceeds its 1 GiB limit: it lives in the job instead.
 - Documentation quality directly drives answer quality: vague headings hurt
   retrieval, as measured above.

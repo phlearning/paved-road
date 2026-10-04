@@ -1,14 +1,81 @@
 [
-  {"question": "Comment créer un nouveau service ?", "expect": "create-a-service.md#Create a service > Create the service with platformctl"},
-  {"question": "How do I create a new service?", "expect": "create-a-service.md#Create a service > Create the service with platformctl"},
-  {"question": "Comment ajouter une base de données PostgreSQL à mon service ?", "expect": "platform-capabilities.md#Platform capabilities > PostgreSQL"},
-  {"question": "Comment stocker une clé API de façon sécurisée ?", "expect": "secrets.md#Secrets > Add a secret"},
-  {"question": "Mon navigateur refuse le certificat de https://grafana.localhost", "expect": "troubleshooting.md#Troubleshooting > The browser rejects"},
-  {"question": "Mon pod est en ImagePullBackOff après le premier push", "expect": "troubleshooting.md#Troubleshooting > A new service shows ImagePullBackOff"},
-  {"question": "Quelle est la différence entre les profils full et lite ?", "expect": "getting-started.md#Getting started > Resource profiles"},
-  {"question": "Which tokens do I need for the private repository?", "expect": "getting-started.md#Getting started > Credentials"},
-  {"question": "Comment lancer une migration de base de données après chaque déploiement ?", "expect": "platform-capabilities.md#Platform capabilities > Jobs"},
-  {"question": "Pourquoi utiliser Sealed Secrets plutôt que Vault ?", "expect": "0003-sealed-secrets.md"},
-  {"question": "Où voir les logs de mon service ?", "expect": "troubleshooting.md#Troubleshooting > Logs"},
-  {"question": "Comment vérifier que la plateforme fonctionne ?", "expect": "getting-started.md#Getting started > Checking the platform"}
+  {
+    "question": "Comment créer un nouveau service ?",
+    "expect": [
+      "create-a-service.md#Create a service > Create the service with platformctl",
+      "README.md#paved-road > Golden path"
+    ]
+  },
+  {
+    "question": "How do I create a new service?",
+    "expect": [
+      "create-a-service.md#Create a service > Create the service with platformctl",
+      "README.en.md#paved-road > Golden path"
+    ]
+  },
+  {
+    "question": "Comment ajouter une base de données PostgreSQL à mon service ?",
+    "expect": [
+      "platform-capabilities.md#Platform capabilities > PostgreSQL",
+      "Capacités en self-service"
+    ]
+  },
+  {
+    "question": "Comment stocker une clé API de façon sécurisée ?",
+    "expect": [
+      "secrets.md#Secrets > Add a secret"
+    ]
+  },
+  {
+    "question": "Mon navigateur refuse le certificat de https://grafana.localhost",
+    "expect": [
+      "troubleshooting.md#Troubleshooting > The browser rejects"
+    ]
+  },
+  {
+    "question": "Mon pod est en ImagePullBackOff après le premier push",
+    "expect": [
+      "troubleshooting.md#Troubleshooting > A new service shows ImagePullBackOff"
+    ]
+  },
+  {
+    "question": "Quelle est la différence entre les profils full et lite ?",
+    "expect": [
+      "getting-started.md#Getting started > Resource profiles",
+      "README.md#paved-road > Démarrage rapide > Profils",
+      "0004-resource-profiles"
+    ]
+  },
+  {
+    "question": "Which tokens do I need for the private repository?",
+    "expect": [
+      "getting-started.md#Getting started > Credentials",
+      "Private repository access",
+      "0005-gitops-delivery"
+    ]
+  },
+  {
+    "question": "Comment lancer une migration de base de données après chaque déploiement ?",
+    "expect": [
+      "platform-capabilities.md#Platform capabilities > Jobs"
+    ]
+  },
+  {
+    "question": "Pourquoi utiliser Sealed Secrets plutôt que Vault ?",
+    "expect": [
+      "0003-sealed-secrets.md"
+    ]
+  },
+  {
+    "question": "Où voir les logs de mon service ?",
+    "expect": [
+      "troubleshooting.md#Troubleshooting > Logs"
+    ]
+  },
+  {
+    "question": "Comment vérifier que la plateforme fonctionne ?",
+    "expect": [
+      "getting-started.md#Getting started > Checking the platform"
+    ]
+  }
 ]

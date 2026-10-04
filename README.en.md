@@ -119,7 +119,7 @@ export PAVED_ROAD_REGISTRY_TOKEN=...  # classic: read:packages only
 bin/platformctl ask "How do I add a PostgreSQL database to my service?"
 ```
 
-It is a RAG: multilingual embeddings in-process, pgvector on the database provided by the platform, indexing by a Job after each deployment, and the shared LLM. Retrieval quality is measured (recall@4 of 100% on 12 reference questions). Design and measurements in [ADR 6](docs/adr/0006-rag-assistant.md).
+It is a RAG: multilingual embeddings in-process, pgvector on the database provided by the platform, indexing by a Job after each deployment, and the shared LLM. Retrieval quality is measured (recall@5 of 100% on 12 reference questions, recomputed after every indexing). Design and measurements in [ADR 6](docs/adr/0006-rag-assistant.md).
 
 ## Repository layout
 

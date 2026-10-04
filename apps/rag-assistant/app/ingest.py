@@ -1,7 +1,8 @@
 """Indexes the Markdown documentation shipped in the image.
 
 Runs as a Kubernetes Job after every deployment (see values.yaml): only
-documents whose content changed are re-embedded, deleted ones are dropped."""
+documents whose content changed are re-embedded, deleted ones are dropped.
+The job then measures retrieval quality on the reference questions."""
 
 import hashlib
 import logging
@@ -12,6 +13,7 @@ from pathlib import Path
 from .chunking import split_markdown
 from .config import Settings
 from .embeddings import Embedder
+from .evaluate import evaluate, log_report
 from .store import Store
 
 log = logging.getLogger("ingest")
@@ -66,8 +68,12 @@ def main() -> None:
     corpus = Path(sys.argv[1] if len(sys.argv) > 1 else settings.corpus_dir)
     store = Store(settings.database_url)
     wait_for_database(store)
-    stats = ingest(corpus, store, Embedder(settings.embedding_model, settings.embedding_cache_dir))
+    embedder = Embedder(settings.embedding_model, settings.embedding_cache_dir)
+    stats = ingest(corpus, store, embedder)
     log.info("done: %s", stats)
+    # Retrieval quality of this index, readable with:
+    #   kubectl -n rag-assistant logs job/rag-assistant-ingest
+    log_report(evaluate(store, embedder, settings.top_k))
 
 
 if __name__ == "__main__":

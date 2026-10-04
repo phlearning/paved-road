@@ -53,3 +53,21 @@ def test_prompt_numbers_excerpts_and_keeps_the_question():
     assert '<excerpt ref="1" source="docs/guides/create-a-service.md"' in prompt
     assert '<excerpt ref="2" source="README.md"' in prompt
     assert prompt.endswith("Question: How?")
+
+
+def test_evaluation_accepts_any_listed_section(tmp_path, monkeypatch):
+    import json
+
+    from app import evaluate as ev
+
+    questions = tmp_path / "q.json"
+    questions.write_text(json.dumps([
+        {"question": "create?", "expect": ["guide.md#Create", "README.md#Golden path"]},
+        {"question": "weather?", "expect": ["nowhere.md"]},
+    ]))
+    monkeypatch.setattr(ev, "QUESTIONS", questions)
+    store = FakeStore([Hit("README.md", "Golden path", "x", 0.9), Hit("other.md", "Other", "y", 0.5)])
+
+    report = ev.evaluate(store, FakeEmbedder(), top_k=5)
+    assert report.found == {1: 1, 3: 1, 5: 1}
+    assert len(report.misses) == 1 and report.misses[0].startswith("weather?")

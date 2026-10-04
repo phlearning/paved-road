@@ -51,8 +51,13 @@ python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/python -m pytest
 ```
 
-Retrieval quality, against the live index:
+Retrieval quality is measured after every indexing, on the reference
+questions in `app/eval_questions.json`:
 
 ```bash
-kubectl -n rag-assistant exec deploy/rag-assistant -- python -m app.evaluate
+kubectl -n rag-assistant logs job/rag-assistant-ingest
 ```
+
+Avoid running `python -m app.evaluate` inside the serving pod: a second copy
+of the embedding model exceeds the container's memory limit and the service
+gets restarted.
