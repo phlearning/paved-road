@@ -15,3 +15,6 @@ ansible/collections/
 .paved-road.env
 bin/
 rendered/
+
+# Service virtualenvs created by make test-services
+.venv/

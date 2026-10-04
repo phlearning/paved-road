@@ -22,8 +22,20 @@ make trust       # trusts the internal CA so browsers accept https://*.localhost
 make creds       # prints the Argo CD and Grafana admin passwords
 ```
 
-`make up` takes about three minutes. `make help` lists every target and
-`make down` deletes the cluster.
+`make up` takes about three minutes. `make help` lists every target.
+
+| Target | Effect |
+|---|---|
+| `make ask Q="..."`, `make chat` | ask the platform assistant one question, or several in a row |
+| `make smoke` | lint and unit tests, as the CI runs on every push |
+| `make regression` | end-to-end golden path test on the local cluster |
+| `make down` | delete the cluster |
+| `make clean` | delete the cluster and every generated file |
+| `make fclean` | `clean`, plus caches, local images and the chosen profile |
+| `make re` | `fclean`, `bootstrap` and `up`: rebuild from scratch |
+
+`make fclean` keeps `~/.config/paved-road/` on purpose: it holds the Sealed
+Secrets key (losing it makes sealed values in Git unreadable) and your tokens.
 
 ## Credentials for the private repository
 

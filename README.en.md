@@ -41,7 +41,7 @@ flowchart LR
 | AI | Shared Ollama (`qwen3:1.7b`), or Claude through the API |
 | Supply chain security | Trivy (configuration, rendered chart, images), multi-arch amd64/arm64 images |
 
-Design decisions are recorded in the [ADRs](docs/adr/), and the [guides](docs/guides/) cover day-to-day use.
+Design decisions are recorded in the [ADRs](docs/adr/), the [guides](docs/guides/) cover day-to-day use, and the [lessons learned](docs/lessons-learned.md) (in French) describe the incidents met and how they were fixed.
 
 ## Quick start
 
@@ -63,7 +63,16 @@ make creds       # print the admin passwords
 | Argo CD | https://argocd.localhost |
 | Grafana | https://grafana.localhost |
 
-`make down` deletes the cluster and `make help` lists every target.
+| Command | Effect |
+|---|---|
+| `make ask Q="..."` / `make chat` | ask the platform assistant one question / several in a row |
+| `make smoke` | fast checks (lint, unit tests), as the CI runs on every push |
+| `make regression` | end-to-end golden path test on the local cluster (`make regression-ci` runs it on GitHub) |
+| `make down` | delete the cluster |
+| `make clean` / `make fclean` | delete the cluster and generated files / back to a fresh clone |
+| `make re` | `fclean`, then `bootstrap` and `up`: rebuild everything from scratch |
+
+`make help` lists every target.
 
 ### Resource profiles
 
@@ -133,7 +142,8 @@ platform/         shared service chart, Argo CD config, config.yaml
 cli/              platformctl, the golden path CLI (Go)
 templates/        service templates (Python, Go)
 apps/             services deployed by Argo CD
-.github/          CI: lint, tests, image builds, e2e
+.github/          CI: smoke on every push, regression on demand
+demo/             terminal GIF (VHS) and video script
 ```
 
 ## Roadmap
@@ -142,4 +152,4 @@ apps/             services deployed by Argo CD
 - [x] **Golden path**: `platformctl` Go CLI, Python and Go templates, GitHub Actions CI, e2e test
 - [x] **RAG assistant**: FastAPI, pgvector, Ollama or API, `platformctl ask`, retrieval evaluation
 - [x] **Security and portability**: Trivy scans in CI, multi-arch images, [OpenShift portability](docs/adr/0007-openshift-portability.md)
-- [ ] **Demo**: video
+- [x] **Demo**: [terminal GIF and video script](demo/)

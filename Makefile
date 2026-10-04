@@ -38,7 +38,7 @@ export PATH := $(HOME)/.local/bin:$(PATH)
 
 .PHONY: help
 help: ## Show this help
-	@grep -hE '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: bootstrap
 bootstrap: ## Install the toolchain and start the container runtime (Ansible)
@@ -127,9 +127,60 @@ test: ## Run the Go tests and the chart lint
 	go test ./...
 	helm lint platform/charts/service --set name=lint --set-string image.repository=lint,image.tag=lint
 
-.PHONY: e2e
-e2e: ## Scaffold, build and deploy a service per language on the running cluster
+.PHONY: test-services
+test-services: ## Run the unit tests of every service in apps/
+	@for dir in apps/*/; do \
+		name=$$(basename $$dir); lang=$$(sed -n 's/^language: //p' $$dir/service.yaml); \
+		echo "==> $$name ($$lang)"; \
+		case $$lang in \
+			go) (cd $$dir && go vet ./... && go test ./...) || exit 1 ;; \
+			python) (cd $$dir && { [ -d .venv ] || python3 -m venv .venv; } \
+				&& .venv/bin/pip install -q -r requirements-dev.txt \
+				&& .venv/bin/python -m pytest -q) || exit 1 ;; \
+		esac; \
+	done
+
+.PHONY: smoke
+smoke: lint test test-services ## Fast checks, as run by the CI on every push
+	@echo "Smoke checks passed."
+
+.PHONY: regression
+regression: cli ## End-to-end golden path on the running cluster (slow)
+	bin/platformctl doctor
 	scripts/e2e.sh
+
+.PHONY: regression-ci
+regression-ci: ## Start the regression workflow on GitHub Actions
+	gh workflow run regression.yml --ref main
+	@echo "Follow it with: gh run watch \$$(gh run list --workflow regression.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+
+.PHONY: ask
+ask: cli ## Ask the platform assistant one question: make ask Q="..."
+	@if [ -z "$(Q)" ]; then echo 'Usage: make ask Q="Comment ajouter une base PostgreSQL ?"'; exit 1; fi
+	@bin/platformctl ask "$(Q)"
+
+.PHONY: chat
+chat: cli ## Ask the platform assistant questions one after another
+	@bin/platformctl chat
+
+.PHONY: clean
+clean: down ## Delete the cluster and every generated file (keeps tools and caches)
+	rm -rf bin/ rendered/ .kube/ infra/cluster/.generated
+	rm -f infra/*/terraform.tfstate infra/*/terraform.tfstate.backup
+
+.PHONY: fclean
+fclean: clean ## clean, plus caches, local images and the chosen profile: back to a fresh clone
+	rm -rf infra/*/.terraform ansible/collections apps/*/.venv .paved-road.env
+	-docker image ls --format '{{.Repository}}:{{.Tag}}' \
+		| grep -E '^ghcr.io/phlearning/paved-road/' | xargs -r docker image rm -f
+	@echo
+	@echo "Kept on purpose:"
+	@echo "  $(SEALING_KEY_DIR)  sealing key: deleting it makes every sealed secret in Git unreadable"
+	@echo "  ~/.config/paved-road/env  your tokens, if you created it"
+	@echo "  Homebrew/apt tools and the Colima VM (remove the VM with: colima delete)"
+
+.PHONY: re
+re: fclean bootstrap up ## Rebuild everything from scratch: fclean, bootstrap, up
 
 .PHONY: lint
 lint: ## Lint Terraform and Ansible code

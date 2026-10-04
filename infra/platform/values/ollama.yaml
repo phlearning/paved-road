@@ -17,3 +17,18 @@ resources:
     memory: 512Mi
   limits:
     memory: 4Gi
+
+# Keep memory bounded inside the 4 GiB limit: one model, one request at a time,
+# a 4k context, and a capped prompt cache. llama.cpp's prompt cache defaults to
+# 8 GiB and Ollama has no setting for it yet; LLAMA_ARG_CACHE_RAM reaches the
+# embedded llama-server directly (ollama/ollama#18264). Without it the cache
+# grew by ~150 MiB per distinct RAG prompt until the pod was OOM-killed.
+extraEnv:
+  - name: OLLAMA_CONTEXT_LENGTH
+    value: "4096"
+  - name: OLLAMA_NUM_PARALLEL
+    value: "1"
+  - name: OLLAMA_MAX_LOADED_MODELS
+    value: "1"
+  - name: LLAMA_ARG_CACHE_RAM
+    value: "512"

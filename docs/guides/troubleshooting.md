@@ -55,6 +55,15 @@ the lite profile: `make down`, then `make bootstrap PROFILE=lite && make up`.
 On macOS, Colima's VM size is set by `make bootstrap` (8 GB on full, 4 GB on
 lite).
 
+## The assistant answers "Ollama request failed: Connection refused"
+
+The shared model server restarted. Check it with
+`kubectl -n ai get pods`; an `OOMKilled` last state means memory ran out. The
+platform caps Ollama's prompt cache with `LLAMA_ARG_CACHE_RAM`
+(`infra/platform/values/ollama.yaml`): if you changed the model or the memory
+limit, keep the cache well below the limit. Ollama reloads the model on its
+own; ask again after a minute.
+
 ## Logs
 
 On the full profile, logs of every pod are in Grafana: Explore, data source

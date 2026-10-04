@@ -60,6 +60,20 @@ Generation, on a 4-vCPU laptop VM:
 | `qwen3:1.7b` (Ollama) | about 35 tokens/s, 3 to 14 s per answer | Correct commands and settings when the excerpt is retrieved, but sometimes answers in English to a French question and once invented a command |
 | `qwen3:4b` (Ollama) | not measured | Killed for lack of memory at a 4 GiB limit on an 8 GB VM |
 
+Two fixes came out of running it:
+
+- **Language.** The prompt ends with an instruction written in the
+  question's language ("Réponds en français, en citant les extraits..."),
+  detected from the question. With a general "answer in the language of the
+  question" in the system prompt, `qwen3:1.7b` often answered French
+  questions in English; with the closing instruction, 3 French test questions
+  got 3 French answers.
+- **Memory.** Ollama's embedded llama.cpp server keeps a prompt cache that
+  defaults to 8 GiB, above the pod's 4 GiB limit; every distinct RAG prompt
+  added about 150 MiB until the pod was OOM-killed after 3 hours. The platform
+  caps it with `LLAMA_ARG_CACHE_RAM=512` (see `infra/platform/values/ollama.yaml`
+  and docs/lessons-learned.md).
+
 ## Consequences
 
 - The assistant runs fully offline on the full profile; answer quality is

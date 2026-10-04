@@ -41,7 +41,7 @@ flowchart LR
 | IA | Ollama (`qwen3:1.7b`) partagé, ou Claude via API |
 | Sécurité de la chaîne | Trivy (configuration, chart rendu, images), images multi-arch amd64/arm64 |
 
-Les choix sont expliqués dans les [ADR](docs/adr/), et les [guides](docs/guides/) décrivent l'usage au quotidien.
+Les choix sont expliqués dans les [ADR](docs/adr/), les [guides](docs/guides/) décrivent l'usage au quotidien, et les [retours d'expérience](docs/lessons-learned.md) racontent les incidents rencontrés et leurs correctifs.
 
 ## Démarrage rapide
 
@@ -63,7 +63,16 @@ make creds       # affiche les mots de passe admin
 | Argo CD | https://argocd.localhost |
 | Grafana | https://grafana.localhost |
 
-`make down` supprime le cluster, et `make help` liste toutes les commandes.
+| Commande | Effet |
+|---|---|
+| `make ask Q="…"` / `make chat` | poser une question / discuter avec l'assistant de la plateforme |
+| `make smoke` | vérifications rapides (lint, tests unitaires), comme la CI à chaque push |
+| `make regression` | test end-to-end du golden path sur le cluster local (`make regression-ci` le lance sur GitHub) |
+| `make down` | supprimer le cluster |
+| `make clean` / `make fclean` | supprimer le cluster et les fichiers générés / tout remettre à zéro, comme un clone neuf |
+| `make re` | `fclean`, puis `bootstrap` et `up` : tout reconstruire depuis zéro |
+
+`make help` liste toutes les commandes.
 
 ### Profils de ressources
 
@@ -133,7 +142,8 @@ platform/         chart partagé des services, config Argo CD, config.yaml
 cli/              platformctl, le CLI du golden path (Go)
 templates/        modèles de services (Python, Go)
 apps/             services déployés par Argo CD
-.github/          CI : lint, tests, build des images, e2e
+.github/          CI : smoke à chaque push, régression à la demande
+demo/             GIF du terminal (VHS) et scénario de la vidéo
 ```
 
 ## Feuille de route
@@ -142,4 +152,4 @@ apps/             services déployés par Argo CD
 - [x] **Golden path** : CLI `platformctl` en Go, templates Python et Go, CI GitHub Actions, test e2e
 - [x] **Assistant RAG** : FastAPI, pgvector, Ollama ou API, `platformctl ask`, évaluation de la recherche
 - [x] **Sécurité et portabilité** : scans Trivy en CI, images multi-arch, [portabilité OpenShift](docs/adr/0007-openshift-portability.md)
-- [ ] **Démo** : vidéo
+- [x] **Démo** : [GIF du terminal et scénario de vidéo](demo/)

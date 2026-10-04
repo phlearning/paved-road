@@ -1,5 +1,5 @@
 from app.llm import Completion
-from app.rag import Assistant, build_prompt
+from app.rag import Assistant, build_prompt, language
 from app.store import Hit
 
 
@@ -49,10 +49,19 @@ def test_no_relevant_context_skips_the_model():
 
 
 def test_prompt_numbers_excerpts_and_keeps_the_question():
-    prompt = build_prompt("How?", HITS)
+    prompt = build_prompt("How do I create a service?", HITS)
     assert '<excerpt ref="1" source="docs/guides/create-a-service.md"' in prompt
     assert '<excerpt ref="2" source="README.md"' in prompt
-    assert prompt.endswith("Question: How?")
+    assert "Question: How do I create a service?" in prompt
+    assert prompt.endswith("Answer in English, citing the excerpts you use as [1], [2].")
+
+
+def test_prompt_closes_in_the_language_of_the_question():
+    assert build_prompt("Comment créer un service ?", HITS).endswith("Réponds en français, en citant les extraits utilisés comme [1], [2].")
+    assert build_prompt("Comment ajouter une base pour mon service ?", HITS).startswith("<documentation>")
+    assert language("Comment ajouter une base pour mon service ?") == "fr"
+    assert language("Where are the logs of my service?") == "en"
+    assert language("Postgres?") == "en"
 
 
 def test_evaluation_accepts_any_listed_section(tmp_path, monkeypatch):

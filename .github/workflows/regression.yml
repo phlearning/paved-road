@@ -1,0 +1,49 @@
+# Regression suite, on demand: a fresh Ubuntu runner is bootstrapped with
+# Ansible, gets the whole platform with Terraform (lite profile), then the
+# golden path is exercised end to end for every language.
+#
+# Run it from the Actions tab ("Run workflow"), or: make regression-ci
+name: Regression
+
+on:
+  workflow_dispatch:
+    inputs:
+      languages:
+        description: Languages to scaffold and deploy
+        default: python go
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: End-to-end (lite profile)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Bootstrap the runner with Ansible
+        run: make bootstrap PROFILE=lite
+      - name: Create the cluster and install the platform
+        # Services are imported into k3d by the e2e script: no registry or
+        # repository credentials are needed.
+        run: make up REQUIRE_TOKENS=0
+      - name: Check the platform
+        run: make cli && bin/platformctl doctor
+      - name: Run the golden path end to end
+        # Passed through the environment, never interpolated into the script.
+        env:
+          LANGUAGES: ${{ inputs.languages }}
+        run: |
+          read -ra langs <<<"$LANGUAGES"
+          scripts/e2e.sh "${langs[@]}"
+      - name: Dump the cluster state
+        if: failure()
+        run: |
+          export KUBECONFIG=$PWD/.kube/config
+          kubectl get pods -A -o wide
+          kubectl get events -A --sort-by=.lastTimestamp | tail -50

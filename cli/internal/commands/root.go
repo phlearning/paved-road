@@ -23,7 +23,7 @@ func newRootCommand() *cobra.Command {
 		Short:        "Self-service CLI of the paved-road platform",
 		SilenceUsage: true,
 	}
-	root.AddCommand(newServiceCommand(), newStatusCommand(), newDoctorCommand(), newAskCommand(), newSealCommand())
+	root.AddCommand(newServiceCommand(), newStatusCommand(), newDoctorCommand(), newAskCommand(), newChatCommand(), newSealCommand())
 	return root
 }
 

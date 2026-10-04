@@ -1,5 +1,6 @@
 """Retrieval-augmented answers over the platform documentation."""
 
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -24,6 +25,22 @@ Cite the excerpts you rely on with their number, like [1] or [2]. If the excerpt
 
 # Below this similarity, an excerpt is unrelated to the question.
 MIN_SCORE = 0.2
+
+# Small local models drift to English when the excerpts are in English. A
+# closing instruction written in the question's language keeps them on track
+# (measured on qwen3:1.7b: French questions got French answers again).
+FRENCH = re.compile(
+    r"[àâçéèêëîïôûùœ]|\b(comment|pourquoi|quel|quelle|quels|quelles|est-ce|mon|ma|mes|une|des|les|dans|avec|pour)\b",
+    re.IGNORECASE,
+)
+CLOSING = {
+    "fr": "Réponds en français, en citant les extraits utilisés comme [1], [2].",
+    "en": "Answer in English, citing the excerpts you use as [1], [2].",
+}
+
+
+def language(question: str) -> str:
+    return "fr" if len(FRENCH.findall(question)) >= 2 else "en"
 
 
 class Retriever(Protocol):
@@ -55,7 +72,10 @@ def build_prompt(question: str, hits: list[Hit]) -> str:
         f'<excerpt ref="{i}" source="{hit.source}" section="{hit.heading}">\n{hit.text}\n</excerpt>'
         for i, hit in enumerate(hits, start=1)
     )
-    return f"<documentation>\n{excerpts}\n</documentation>\n\nQuestion: {question}"
+    return (
+        f"<documentation>\n{excerpts}\n</documentation>\n\n"
+        f"Question: {question}\n\n{CLOSING[language(question)]}"
+    )
 
 
 class Assistant:
