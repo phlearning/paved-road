@@ -112,6 +112,6 @@ apps/             services déployés par Argo CD
 ## Feuille de route
 
 - [x] **Socle** : Ansible (macOS, Linux, WSL2), profils full et lite, cluster k3d via Terraform, Argo CD, cert-manager et CA interne, Prometheus/Grafana/Loki, Sealed Secrets
-- [ ] **Golden path** : CLI `platformctl` en Go, templates Python et Go, CI GitHub Actions, test e2e
+- [x] **Golden path** : CLI `platformctl` en Go, templates Python et Go, CI GitHub Actions, test e2e
 - [ ] **Assistant RAG** : FastAPI, pgvector, Ollama ou API, `platformctl ask`
 - [ ] **Finitions** : portabilité OpenShift, scan Trivy, vidéo de démo

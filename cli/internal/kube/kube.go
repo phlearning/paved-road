@@ -87,6 +87,10 @@ func toApplication(u unstructured.Unstructured) Application {
 		Revision: str("status", "sync", "revision"),
 		Message:  str("status", "operationState", "message"),
 	}
+	// Applications with several sources report one revision per source.
+	if revisions, _, _ := unstructured.NestedStringSlice(u.Object, "status", "sync", "revisions"); app.Revision == "" && len(revisions) > 0 {
+		app.Revision = revisions[0]
+	}
 	if len(app.Revision) > 7 {
 		app.Revision = app.Revision[:7]
 	}

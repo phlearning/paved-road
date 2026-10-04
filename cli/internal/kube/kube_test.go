@@ -25,3 +25,15 @@ func TestToApplication(t *testing.T) {
 		t.Errorf("toApplication() = %+v, want %+v", got, want)
 	}
 }
+
+func TestToApplicationWithSeveralSources(t *testing.T) {
+	u := unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"labels": map[string]any{ServiceLabel: "hello"}},
+		"status": map[string]any{
+			"sync": map[string]any{"status": "Synced", "revisions": []any{"1cc453ab4aeb", "1cc453ab4aeb"}},
+		},
+	}}
+	if got := toApplication(u).Revision; got != "1cc453a" {
+		t.Errorf("Revision = %q, want %q", got, "1cc453a")
+	}
+}
