@@ -42,7 +42,7 @@ help: ## Show this help
 
 .PHONY: bootstrap
 bootstrap: ## Install the toolchain and start the container runtime (Ansible)
-	@hack/ensure-ansible.sh
+	@scripts/ensure-ansible.sh
 	cd ansible && ansible-galaxy collection install -r requirements.yml -p ./collections
 	cd ansible && ansible-playbook bootstrap.yml $(BECOME_FLAGS) \
 		$(if $(filter command line environment,$(origin PROFILE)),-e profile=$(PROFILE))
@@ -96,11 +96,11 @@ ca: ## Export the internal root CA to .kube/paved-road-ca.crt
 
 .PHONY: trust
 trust: ca ## Trust the internal root CA on this machine (asks for sudo)
-	hack/trust-ca.sh .kube/paved-road-ca.crt
+	scripts/trust-ca.sh .kube/paved-road-ca.crt
 
 .PHONY: untrust
 untrust: ## Remove the internal root CA from this machine (asks for sudo)
-	hack/trust-ca.sh .kube/paved-road-ca.crt --remove
+	scripts/trust-ca.sh .kube/paved-road-ca.crt --remove
 
 .PHONY: creds
 creds: ## Print the admin credentials of the platform UIs
@@ -129,7 +129,7 @@ test: ## Run the Go tests and the chart lint
 
 .PHONY: e2e
 e2e: ## Scaffold, build and deploy a service per language on the running cluster
-	hack/e2e.sh
+	scripts/e2e.sh
 
 .PHONY: lint
 lint: ## Lint Terraform and Ansible code
@@ -139,4 +139,4 @@ lint: ## Lint Terraform and Ansible code
 	terraform -chdir=$(TF_PLATFORM) init -backend=false -input=false >/dev/null
 	terraform -chdir=$(TF_PLATFORM) validate
 	cd ansible && ansible-lint bootstrap.yml tasks/ vars/ handlers/
-	shellcheck hack/*.sh
+	shellcheck scripts/*.sh

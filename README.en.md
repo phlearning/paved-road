@@ -125,7 +125,7 @@ It is a RAG: multilingual embeddings in-process, pgvector on the database provid
 
 ```
 ansible/          workstation setup (macOS, Debian/Ubuntu)
-hack/             helper scripts
+scripts/          helper scripts
 infra/cluster/    k3d cluster (Terraform)
 infra/platform/   platform foundation (Terraform + Helm)
 docs/adr/         architecture decision records

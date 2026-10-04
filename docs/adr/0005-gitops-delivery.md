@@ -39,7 +39,7 @@ a Trivy scan of the configuration and of the fully rendered shared chart, Go
 tests, chart lint, then for each changed service its tests, an image build
 and a Trivy scan that fails on fixable HIGH or CRITICAL vulnerabilities, and
 an end-to-end run on a fresh Ubuntu runner (Ansible bootstrap, `make up` in
-the lite profile, `hack/e2e.sh`). On `main`, the images are pushed to GHCR
+the lite profile, `scripts/e2e.sh`). On `main`, the images are pushed to GHCR
 for amd64 and arm64 (laptops are often Apple Silicon) and a bot commit sets
 the new tag in `values.yaml`; Argo CD deploys that commit.
 

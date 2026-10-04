@@ -125,7 +125,7 @@ C'est un RAG : il utilise des embeddings multilingues dans le service, pgvector 
 
 ```
 ansible/          préparation du poste de travail (macOS, Debian/Ubuntu)
-hack/             scripts utilitaires
+scripts/          scripts utilitaires
 infra/cluster/    cluster k3d (Terraform)
 infra/platform/   socle plateforme (Terraform + Helm)
 docs/adr/         décisions d'architecture
